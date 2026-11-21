@@ -1,0 +1,451 @@
+#!/usr/bin/env bash
+# pantheon — install / uninstall the Pantheon AI team, skills and harness into Claude Code.
+#
+# Everything this script creates is recorded in $CLAUDE_DIR/.pantheon/state, and
+# `uninstall` only touches what that file lists. Existing files are never overwritten
+# unless FORCE=1, in which case they are moved to $CLAUDE_DIR/backups/pantheon-<ts>/
+# first and restored on uninstall. Compatible with macOS bash 3.2.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
+STATE_DIR="$CLAUDE_DIR/.pantheon"
+STATE="$STATE_DIR/state"
+SETTINGS="$CLAUDE_DIR/settings.json"
+DRY_RUN="${DRY_RUN:-0}"
+FORCE="${FORCE:-0}"
+PROFILES="${PROFILES:-all}"
+SKILLS_VERSION="${SKILLS_VERSION:-1.5.18}"
+SKILLS_CLI="${SKILLS_CLI:-npx -y skills@$SKILLS_VERSION}"
+TS="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="$CLAUDE_DIR/backups/pantheon-$TS"
+
+PLUGIN="$ROOT/plugins/pantheon"
+MANIFEST="$ROOT/skills/manifest.tsv"
+PLUGINS_TSV="$ROOT/plugins.tsv"
+GUARD="\"$PLUGIN/hooks/guard.sh\""   # the hook command as written to settings.json (quoted path)
+
+# ---------------------------------------------------------------- output helpers
+
+if [ -t 1 ]; then B=$'\033[1m'; D=$'\033[2m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; C=$'\033[36m'; N=$'\033[0m'
+else B=; D=; G=; Y=; R=; C=; N=; fi
+
+step() { printf '%s==>%s %s%s%s\n' "$C" "$N" "$B" "$*" "$N"; }
+ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
+skip() { printf '  %s·%s %s%s%s\n' "$D" "$N" "$D" "$*" "$N"; }
+warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*" >&2; }
+die()  { printf '%serror:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+
+dry() { [ "$DRY_RUN" = 1 ]; }
+run() { if dry; then printf '  %s[dry]%s %s\n' "$Y" "$N" "$*"; else "$@"; fi; }
+
+# runq: like run, but the command's output goes to $LOG instead of the terminal.
+LOG="$STATE_DIR/log"
+runq() {
+  if dry; then printf '  %s[dry]%s %s\n' "$Y" "$N" "$*"; return 0; fi
+  mkdir -p "$STATE_DIR"
+  printf '\n$ %s\n' "$*" >> "$LOG"
+  "$@" </dev/null >> "$LOG" 2>&1
+}
+
+need() { command -v "$1" >/dev/null 2>&1 || die "'$1' is required but not installed"; }
+
+# ---------------------------------------------------------------- state file
+# One record per line: <kind>\t<value>[\t<extra>]
+
+record() {
+  dry && return 0
+  mkdir -p "$STATE_DIR"
+  recorded "$@" || printf '%s\n' "$(IFS=$'\t'; echo "$*")" >> "$STATE"
+}
+
+recorded() { [ -f "$STATE" ] && grep -qxF "$(IFS=$'\t'; echo "$*")" "$STATE"; }
+
+unrecord() {
+  dry && return 0
+  [ -f "$STATE" ] || return 0
+  local line tmp="$STATE.tmp"
+  line="$(IFS=$'\t'; echo "$*")"
+  grep -vxF "$line" "$STATE" > "$tmp" || true
+  mv "$tmp" "$STATE"
+}
+
+# Values of one record kind, one per line.
+records() { [ -f "$STATE" ] && awk -F'\t' -v k="$1" '$1==k {print $2}' "$STATE" || true; }
+
+# Column 3 of a record whose kind and value match.
+record_extra() { [ -f "$STATE" ] && awk -F'\t' -v k="$1" -v v="$2" '$1==k && $2==v {print $3; exit}' "$STATE" || true; }
+
+# ---------------------------------------------------------------- links
+
+# link <source> <dest>: symlink dest -> source, never clobbering a real file.
+link() {
+  local src="$1" dst="$2" name
+  name="${dst#"$CLAUDE_DIR"/}"
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+    record link "$dst"; skip "$name (already linked)"; return 0
+  fi
+  if [ -e "$dst" ] || [ -L "$dst" ]; then
+    if [ "$FORCE" != 1 ]; then skip "$name exists — kept yours (FORCE=1 to replace)"; return 0; fi
+    local bak="$BACKUP_DIR/$name"
+    if dry; then printf '  %s[dry]%s back up %s, then link it\n' "$Y" "$N" "$name"; return 0; fi
+    run mkdir -p "$(dirname "$bak")"
+    run mv "$dst" "$bak"
+    record backup "$dst" "$bak"
+    warn "$name backed up to ${bak#"$CLAUDE_DIR"/}"
+  fi
+  if dry; then printf '  %s[dry]%s link %s\n' "$Y" "$N" "$name"; return 0; fi
+  mkdir -p "$(dirname "$dst")"
+  ln -s "$src" "$dst"
+  record link "$dst"
+  ok "$name"
+}
+
+# unlink_recorded <path|dir/>: remove recorded links (one exact path, or everything
+# under a directory when the argument ends in /) and restore any backups.
+unlink_recorded() {
+  local target="$1" dst bak
+  for dst in $(records link); do
+    case "$target" in
+      */) case "$dst" in "$target"*) ;; *) continue ;; esac ;;
+      *)  [ "$dst" = "$target" ] || continue ;;
+    esac
+    if [ -L "$dst" ]; then
+      case "$(readlink "$dst")" in
+        "$ROOT"/*) run rm "$dst"; ok "removed ${dst#"$CLAUDE_DIR"/}" ;;
+        *) warn "${dst#"$CLAUDE_DIR"/} now points elsewhere — left alone" ;;
+      esac
+    fi
+    unrecord link "$dst"
+    bak="$(record_extra backup "$dst")"
+    if [ -n "$bak" ]; then
+      if [ -e "$bak" ] || [ -L "$bak" ]; then run mv "$bak" "$dst"; ok "restored ${dst#"$CLAUDE_DIR"/} from backup"; fi
+      unrecord backup "$dst" "$bak"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------- settings.json
+
+settings_backed_up=0
+settings_write() { # settings_write <jq filter> [jq args...]
+  local filter="$1"; shift
+  [ -f "$SETTINGS" ] || { dry || { mkdir -p "$CLAUDE_DIR"; echo '{}' > "$SETTINGS"; }; }
+  if dry; then printf '  %s[dry]%s jq %s settings.json\n' "$Y" "$N" "$filter"; return 0; fi
+  if [ "$settings_backed_up" = 0 ]; then
+    mkdir -p "$BACKUP_DIR"; cp "$SETTINGS" "$BACKUP_DIR/settings.json"; settings_backed_up=1
+  fi
+  local tmp="$SETTINGS.pantheon.tmp"
+  jq "$@" "$filter" "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+}
+
+settings_get() { [ -f "$SETTINGS" ] && jq -c "$@" "$SETTINGS" || echo null; }
+
+# Merge core/settings.json two levels deep: a missing top-level key is added whole;
+# for objects present on both sides only missing sub-keys are added. Your values always win.
+merge_settings() {
+  local frag="$ROOT/core/settings.json" key sub path
+  [ -f "$frag" ] || return 0
+  for key in $(jq -r 'keys[]' "$frag"); do
+    path="$(jq -cn --arg k "$key" '[$k]')"
+    if [ "$(settings_get --argjson p "$path" 'getpath($p)')" = null ]; then
+      settings_write '.[$k] = $v' --arg k "$key" --argjson v "$(jq -c --arg k "$key" '.[$k]' "$frag")"
+      record setting "$path"; ok "settings.$key"
+    elif [ "$(jq -r --arg k "$key" '.[$k]|type' "$frag")" = object ]; then
+      local added=0 kept=0
+      for sub in $(jq -r --arg k "$key" '.[$k]|keys[]' "$frag"); do
+        path="$(jq -cn --arg k "$key" --arg s "$sub" '[$k,$s]')"
+        if [ "$(settings_get --argjson p "$path" 'getpath($p)')" = null ]; then
+          settings_write 'setpath($p; $v)' --argjson p "$path" --argjson v "$(jq -c --argjson p "$path" 'getpath($p)' "$frag")" >/dev/null
+          record setting "$path"; added=$((added+1))
+        else kept=$((kept+1)); fi
+      done
+      if [ "$added" -gt 0 ]; then ok "settings.$key: $added added, $kept of yours kept"
+      else skip "settings.$key (all $kept already set)"; fi
+    else
+      skip "settings.$key (yours kept)"
+    fi
+  done
+}
+
+# Remove only the settings we added, and only if they still hold the value we wrote.
+unmerge_settings() {
+  local frag="$ROOT/core/settings.json" path removed=0
+  for path in $(records setting); do
+    if [ -f "$SETTINGS" ] && [ "$(settings_get --argjson p "$path" 'getpath($p)')" = "$(jq -c --argjson p "$path" 'getpath($p)' "$frag" 2>/dev/null || echo missing)" ]; then
+      settings_write 'delpaths([$p]) | if ($p|length) > 1 and getpath($p[:-1]) == {} then delpaths([$p[:-1]]) else . end' --argjson p "$path" >/dev/null
+      removed=$((removed+1))
+    else
+      skip "settings $(echo "$path" | jq -r 'join(".")') changed since install — left alone"
+    fi
+    unrecord setting "$path"
+  done
+  [ "$removed" = 0 ] || ok "settings: $removed entries Pantheon added were removed"
+}
+
+install_guard_hook() {
+  local has
+  has="$(settings_get --arg c "$GUARD" '[.hooks.PreToolUse[]?.hooks[]?.command] | index($c) != null')"
+  if [ "$has" = true ]; then record hook "$GUARD"; skip "guard hook (already set)"; return 0; fi
+  settings_write '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{"matcher":"Bash","hooks":[{"type":"command","command":$c,"timeout":10}]}])' --arg c "$GUARD"
+  record hook "$GUARD"; ok "guard hook (PreToolUse/Bash)"
+}
+
+uninstall_guard_hook() {
+  recorded hook "$GUARD" || return 0
+  settings_write '
+    .hooks.PreToolUse |= map(.hooks |= map(select(.command != $c)) | select(.hooks != []))
+    | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end
+    | if .hooks == {} then del(.hooks) else . end' --arg c "$GUARD"
+  unrecord hook "$GUARD"; ok "guard hook removed"
+}
+
+# ---------------------------------------------------------------- components
+
+install_core() {
+  step "core: rules, statusline, settings, guard hook"
+  local f
+  for f in "$ROOT"/core/rules/*.md; do link "$f" "$CLAUDE_DIR/rules/$(basename "$f")"; done
+  link "$ROOT/core/statusline.sh" "$CLAUDE_DIR/statusline.sh"
+  merge_settings
+  install_guard_hook
+}
+
+uninstall_core() {
+  step "core"
+  unlink_recorded "$CLAUDE_DIR/rules/"
+  unlink_recorded "$CLAUDE_DIR/statusline.sh"
+  uninstall_guard_hook
+  unmerge_settings
+}
+
+install_team() {
+  step "team: agents, commands, Pantheon skills"
+  local f d
+  for f in "$PLUGIN"/agents/*.md;   do link "$f" "$CLAUDE_DIR/agents/$(basename "$f")"; done
+  for f in "$PLUGIN"/commands/*.md; do link "$f" "$CLAUDE_DIR/commands/$(basename "$f")"; done
+  for d in "$PLUGIN"/skills/*/;     do d="${d%/}"; link "$d" "$CLAUDE_DIR/skills/$(basename "$d")"; done
+  plugin_conflict_check
+}
+
+uninstall_team() {
+  step "team"
+  unlink_recorded "$CLAUDE_DIR/agents/"
+  unlink_recorded "$CLAUDE_DIR/commands/"
+  local d
+  for d in "$PLUGIN"/skills/*/; do d="${d%/}"; unlink_recorded "$CLAUDE_DIR/skills/$(basename "$d")"; done
+}
+
+plugin_conflict_check() {
+  local ip="$CLAUDE_DIR/plugins/installed_plugins.json"
+  if [ -f "$ip" ] && jq -e '.plugins | keys[] | select(startswith("pantheon@"))' "$ip" >/dev/null 2>&1; then
+    warn "the pantheon plugin is also installed via /plugin — agents will appear twice; keep one route"
+  fi
+}
+
+# Selected manifest rows: profile \t source \t skill
+manifest_rows() {
+  [ -f "$MANIFEST" ] || return 0
+  awk -F'\t' -v p=" $PROFILES " '
+    /^#/ || NF < 3 { next }
+    p == " all " || index(p, " " $1 " ") { print }' "$MANIFEST"
+}
+
+skill_present() { [ -e "$CLAUDE_DIR/skills/$1" ] || [ -L "$CLAUDE_DIR/skills/$1" ]; }
+
+install_skills() {
+  step "skills: profiles [$PROFILES]"
+  local rows src names name args added
+  rows="$(manifest_rows)"
+  [ -n "$rows" ] || { warn "no manifest rows for profiles: $PROFILES"; return 0; }
+
+  # Vendored skills live in this repo and are symlinked.
+  for name in $(printf '%s\n' "$rows" | awk -F'\t' '$2=="vendor" {print $3}'); do
+    if [ -d "$ROOT/skills/vendor/$name" ]; then link "$ROOT/skills/vendor/$name" "$CLAUDE_DIR/skills/$name"
+    else warn "vendor/$name listed in manifest but missing from repo"; fi
+  done
+
+  # Everything else comes from skills.sh, one `skills add` per source.
+  for src in $(printf '%s\n' "$rows" | awk -F'\t' '$2!="vendor" {print $2}' | sort -u); do
+    names=""; args=""
+    for name in $(printf '%s\n' "$rows" | awk -F'\t' -v s="$src" '$2==s {print $3}'); do
+      if skill_present "$name"; then skip "$name (already installed)"; continue; fi
+      names="$names $name"; args="$args -s $name"
+    done
+    [ -n "$names" ] || continue
+    printf '  %s+%s %s:%s\n' "$C" "$N" "$src" "$names"
+    # shellcheck disable=SC2086
+    if runq $SKILLS_CLI add "$src" -g -a claude-code -y $args; then
+      added=""
+      for name in $names; do
+        if dry || skill_present "$name"; then record skill "$name"; added="$added $name"
+        else warn "$name: not found in $src after install"; fi
+      done
+      [ -n "$added" ] && ok "installed:$added"
+    else
+      warn "skills add $src failed — see $LOG"
+    fi
+  done
+}
+
+uninstall_skills() {
+  step "skills"
+  local dst name names=""
+  for dst in $(records link); do
+    case "$dst" in "$CLAUDE_DIR/skills/"*) ;; *) continue ;; esac
+    case "$(readlink "$dst" 2>/dev/null)" in "$ROOT/skills/vendor/"*) unlink_recorded "$dst" ;; esac
+  done
+  for name in $(records skill); do names="$names $name"; done
+  [ -n "$names" ] || return 0
+  # shellcheck disable=SC2086
+  if runq $SKILLS_CLI remove -g -a claude-code -y $names; then
+    for name in $names; do unrecord skill "$name"; done
+    ok "removed:$names"
+  else
+    warn "skills remove failed — see $LOG"
+  fi
+}
+
+install_plugins() {
+  step "plugins: marketplaces + plugins from plugins.tsv"
+  need claude
+  local km="$CLAUDE_DIR/plugins/known_marketplaces.json" ip="$CLAUDE_DIR/plugins/installed_plugins.json"
+  local kind a b
+  while IFS=$'\t' read -r kind a b; do
+    case "$kind" in
+      marketplace)
+        if [ -f "$km" ] && jq -e --arg n "$a" 'has($n)' "$km" >/dev/null; then skip "marketplace $a"; continue; fi
+        if runq claude plugin marketplace add "$b"; then record marketplace "$a"; ok "marketplace $a"; else warn "marketplace $a failed — see $LOG"; fi ;;
+      plugin)
+        if [ -f "$ip" ] && jq -e --arg n "$a" '.plugins | has($n)' "$ip" >/dev/null; then skip "$a"; continue; fi
+        if runq claude plugin install "$a" -s user; then record plugin "$a"; ok "$a"; else warn "$a failed — see $LOG"; fi ;;
+    esac
+  done < <(grep -v '^#' "$PLUGINS_TSV" | grep -v '^$')
+}
+
+uninstall_plugins() {
+  step "plugins"
+  local p
+  for p in $(records plugin); do
+    if runq claude plugin uninstall "$p" -s user; then ok "$p"; unrecord plugin "$p"; else warn "$p failed — see $LOG"; fi
+  done
+  for p in $(records marketplace); do
+    if runq claude plugin marketplace remove "$p"; then ok "marketplace $p"; unrecord marketplace "$p"; else warn "marketplace $p failed — see $LOG"; fi
+  done
+}
+
+# ---------------------------------------------------------------- single-skill management
+
+skill_add() { # skill_add <source> <skill> [profile]
+  local src="${1:?usage: skill-add SRC=owner/repo SKILL=name [PROFILE=x]}" name="${2:?SKILL is required}" profile="${3:-misc}"
+  step "add $name from $src"
+  if skill_present "$name"; then skip "$name already installed"
+  elif runq $SKILLS_CLI add "$src" -g -a claude-code -y -s "$name" && { dry || skill_present "$name"; }; then
+    record skill "$name"; ok "installed"
+  else
+    die "could not install $name from $src — see $LOG"
+  fi
+  if awk -F'\t' -v n="$name" '$3==n {f=1} END {exit !f}' "$MANIFEST"; then skip "already in manifest"
+  else dry || printf '%s\t%s\t%s\n' "$profile" "$src" "$name" >> "$MANIFEST"; ok "added to manifest ($profile)"; fi
+}
+
+skill_remove() { # skill_remove <skill>
+  local name="${1:?usage: skill-remove SKILL=name}"
+  local dst="$CLAUDE_DIR/skills/$name"
+  step "remove $name"
+  if [ -L "$dst" ] && case "$(readlink "$dst")" in "$ROOT"/*) true ;; *) false ;; esac; then
+    unlink_recorded "$dst"
+  elif skill_present "$name"; then
+    runq $SKILLS_CLI remove -g -a claude-code -y "$name" || die "skills remove failed — see $LOG"
+    unrecord skill "$name"; ok "uninstalled"
+  else
+    skip "not installed"
+  fi
+  if [ -f "$MANIFEST" ] && ! dry; then
+    awk -F'\t' -v n="$name" '$3!=n' "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"; ok "dropped from manifest"
+  fi
+}
+
+# ---------------------------------------------------------------- reporting
+
+status() {
+  step "Pantheon status ($CLAUDE_DIR)"
+  if [ ! -f "$STATE" ]; then skip "nothing installed by Pantheon"; return 0; fi
+  awk -F'\t' '{c[$1]++} END {for (k in c) printf "  %-12s %d\n", k, c[k]}' "$STATE" | sort
+}
+
+list_skills() {
+  [ -f "$MANIFEST" ] || die "no manifest — run: make capture"
+  awk -F'\t' '/^#/ || NF<3 {next} {n[$1]++; s[$1]=s[$1] " " $3} END {for (p in n) printf "\n%s (%d):%s\n", p, n[p], s[p]}' "$MANIFEST" | fold -s -w 100
+}
+
+doctor() {
+  step "doctor"
+  local bad=0 v
+  for t in git jq node npx claude; do
+    if command -v "$t" >/dev/null 2>&1; then ok "$t"; else warn "$t missing"; bad=1; fi
+  done
+  if command -v node >/dev/null 2>&1; then
+    v="$(node -p 'process.versions.node.split(".")[0]')"
+    if [ "$v" -lt 18 ]; then warn "node $v < 18 — skills CLI will not run"; bad=1
+    elif [ "$v" -lt 22 ]; then skip "node $v: pinned skills@$SKILLS_VERSION works; newer skills CLI needs node >= 22.20"
+    else ok "node $v"; fi
+  fi
+  local broken
+  broken="$(find "$CLAUDE_DIR/skills" "$CLAUDE_DIR/agents" "$CLAUDE_DIR/commands" "$CLAUDE_DIR/rules" -maxdepth 1 -type l ! -exec test -e {} \; -print 2>/dev/null || true)"
+  if [ -n "$broken" ]; then warn "broken symlinks:"; printf '    %s\n' $broken >&2; bad=1; else ok "no broken links"; fi
+  if [ -f "$SETTINGS" ]; then
+    if jq empty "$SETTINGS" 2>/dev/null; then ok "settings.json is valid JSON"; else warn "settings.json is invalid JSON"; bad=1; fi
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    if claude plugin validate "$ROOT" >/dev/null 2>&1; then ok "marketplace manifest valid"; else warn "claude plugin validate $ROOT failed"; bad=1; fi
+  fi
+  status
+  return $bad
+}
+
+usage() {
+  cat <<EOF
+${B}pantheon${N} — the Pantheon AI team for Claude Code
+
+  install   [core|team|skills|plugins|all]   default: core team skills
+  uninstall [core|team|skills|plugins|all]   removes only what Pantheon installed
+  skill-add <source> <skill> [profile]       install from skills.sh and add to manifest
+  skill-remove <skill>                       uninstall and drop from manifest
+  list | status | doctor
+
+env: CLAUDE_DIR=$CLAUDE_DIR PROFILES="$PROFILES" DRY_RUN=$DRY_RUN FORCE=$FORCE SKILLS_VERSION=$SKILLS_VERSION
+EOF
+}
+
+# ---------------------------------------------------------------- main
+
+main() {
+  local cmd="${1:-help}"; shift || true
+  case "$cmd" in
+    install|uninstall)
+      need jq
+      dry && printf '%sDRY RUN — nothing will change%s\n' "$Y" "$N"
+      local parts="$*" p
+      if [ "$cmd" = install ]; then
+        case "$parts" in "") parts="core team skills" ;; all) parts="core team skills plugins" ;; esac
+      else  # uninstall in reverse order
+        case "$parts" in ""|all) parts="plugins skills team core" ;; esac
+      fi
+      for p in $parts; do
+        case "$p" in core|team|skills|plugins) "${cmd}_$p" ;; *) die "unknown part: $p" ;; esac
+      done
+      # Once nothing is recorded any more, leave no trace.
+      if [ "$cmd" = uninstall ] && ! dry && [ ! -s "$STATE" ]; then rm -rf "$STATE_DIR"; fi
+      step "done" ;;
+    skill-add)    need jq; skill_add "$@" ;;
+    skill-remove) need jq; skill_remove "$@" ;;
+    list)         list_skills ;;
+    status)       status ;;
+    doctor)       doctor ;;
+    help|-h|--help) usage ;;
+    *) usage; exit 1 ;;
+  esac
+}
+
+main "$@"

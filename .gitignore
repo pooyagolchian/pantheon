@@ -1,0 +1,4 @@
+.DS_Store
+*.tmp
+*.pantheon.tmp
+node_modules/

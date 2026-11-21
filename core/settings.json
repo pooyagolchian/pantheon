@@ -1,0 +1,30 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  },
+  "skillOverrides": {
+    "template-skill": "off",
+    "design-taste-frontend-v1": "off",
+    "algorithmic-art": "off",
+    "gpt-taste": "name-only",
+    "stitch-design-taste": "name-only",
+    "industrial-brutalist-ui": "name-only",
+    "minimalist-ui": "name-only",
+    "brandkit": "name-only",
+    "canvas-design": "name-only",
+    "theme-factory": "name-only",
+    "image-to-code": "name-only",
+    "imagegen-frontend-web": "name-only",
+    "imagegen-frontend-mobile": "name-only",
+    "web-artifacts-builder": "name-only",
+    "brand-guidelines": "name-only",
+    "seo": "name-only",
+    "seo-audit": "name-only",
+    "seo-aeo-audit": "name-only",
+    "slack-gif-creator": "name-only",
+    "resume-ats-optimizer": "name-only",
+    "resume-bullet-writer": "name-only",
+    "tailored-resume-generator": "name-only"
+  }
+}

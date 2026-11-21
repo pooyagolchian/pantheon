@@ -1,0 +1,10 @@
+{
+  "name": "pantheon",
+  "version": "0.1.0",
+  "description": "Pantheon AI team for Claude Code: nine specialist agents (architect, builder, reviewer, verifier, security, researcher, debugger, devops, writer), orchestration commands, agentic-programming skills and a safety hook.",
+  "author": { "name": "Pooya Golchian", "url": "https://github.com/pooyagolchian" },
+  "homepage": "https://github.com/pooyagolchian/pantheon",
+  "repository": "https://github.com/pooyagolchian/pantheon",
+  "license": "MIT",
+  "keywords": ["agents", "orchestration", "team", "skills", "agentic-programming"]
+}
