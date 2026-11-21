@@ -1,5 +1,4 @@
-  { find "$HOME" -maxdepth 4 -name skills-lock.json -not -path "*/node_modules/*" -not -path "$ROOT/*" 2>/dev/null || true; } |
-#!/usr/bin/env bash{ find "$HOME" -maxdepth 4 -name skills-lock.json -not -path "*/node_modules/*" -not -path "$ROOT/*" 2>/dev/null || true; } |
+#!/usr/bin/env bash
 # capture.sh — snapshot this machine's Claude Code setup into the repo.
 #
 #   skills/manifest.tsv   every installed skill: profile, source, name
