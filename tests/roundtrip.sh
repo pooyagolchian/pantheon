@@ -4,7 +4,7 @@
 # Uses the network (skills.sh) for the small PROFILES set below.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROFILES="${TEST_PROFILES:-career docs}"
+PROFILES="${TEST_PROFILES:-career docs personal}"
 
 FAKE="$(mktemp -d)"; trap 'rm -rf "$FAKE"' EXIT
 export npm_config_cache="${npm_config_cache:-$HOME/.npm}"   # reuse the real npx cache
@@ -34,7 +34,8 @@ check "commands linked"               '[ -L "$CLAUDE_DIR/commands/assemble.md" ]
 check "pantheon skills linked"        '[ -L "$CLAUDE_DIR/skills/pantheon-orchestration" ]'
 check "rules linked, mine kept"       '[ -L "$CLAUDE_DIR/rules/pantheon.md" ] && [ -f "$CLAUDE_DIR/rules/mine.md" ]'
 check "existing docx skill kept"      'grep -q "^mine$" "$CLAUDE_DIR/skills/docx/SKILL.md"'
-check "vendored skill linked"         '[ -L "$CLAUDE_DIR/skills/resume-bullet-writer" ]'
+check "vendored skill linked"         '[ "$(readlink "$CLAUDE_DIR/skills/pooya-llm-aeo-revise")" = "$ROOT/skills/vendor/pooya-llm-aeo-revise" ]'
+check "known-sources skill installed" '[ -f "$CLAUDE_DIR/skills/resume-bullet-writer/SKILL.md" ]'
 check "skills.sh skill installed"     '[ -f "$CLAUDE_DIR/skills/pdf/SKILL.md" ]'
 check "settings: user keys kept"      'jq -e ".model==\"opus\" and .permissions.allow==[\"Bash(ls)\"] and .skillOverrides[\"gpt-taste\"]==\"off\" and (.hooks.Stop|length)==1" "$CLAUDE_DIR/settings.json" >/dev/null'
 check "settings: statusLine added"    'jq -e ".statusLine.command" "$CLAUDE_DIR/settings.json" >/dev/null'

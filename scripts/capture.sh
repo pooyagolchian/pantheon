@@ -23,8 +23,10 @@ command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 sources="$tmp/sources.tsv"   # skill \t source, first match wins
 
-# 1. global lock, 2. project locks, 3. hand-maintained known sources
+# 0. skills pinned to "vendor" (upstream removed them), 1. global lock, 2. project locks,
+# 3. hand-maintained known sources
 {
+  awk -F'\t' '!/^#/ && $2=="vendor"' "$ROOT/skills/known-sources.tsv" 2>/dev/null || true
   [ -f "$AGENTS_DIR/.skill-lock.json" ] && jq -r '.skills | to_entries[] | "\(.key)\t\(.value.source)"' "$AGENTS_DIR/.skill-lock.json"
   { find "$HOME" -maxdepth 4 -name skills-lock.json -not -path '*/node_modules/*' -not -path "$ROOT/*" 2>/dev/null || true; } |
     while read -r f; do jq -r '.skills | to_entries[] | "\(.key)\t\(.value.source)"' "$f" 2>/dev/null || true; done
@@ -62,6 +64,7 @@ for path in "$CLAUDE_DIR"/skills/*; do
   fi
   src="$(awk -F'\t' -v n="$name" '$1==n {print $2; exit}' "$sources")"
   case "$target" in "$ROOT/skills/vendor/"*) src="" ;; esac
+  [ "$src" = vendor ] && src=""
   if [ -n "$src" ]; then
     printf '%s\t%s\t%s\n' "$(profile_for "$name" "$src")" "$src" "$name" >> "$rows"; sourced=$((sourced+1))
   else

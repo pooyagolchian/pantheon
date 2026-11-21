@@ -3,7 +3,9 @@ description: Write a session handoff note so a fresh session (or teammate) can c
 argument-hint: [output path — default HANDOFF.md]
 ---
 
-Write a handoff note to ${ARGUMENTS:-HANDOFF.md} in the project root. It must let someone with zero context continue the work. Keep it under ~60 lines:
+Output path: $ARGUMENTS
+
+Write a handoff note to that path, or to `HANDOFF.md` in the project root if no path is given. It must let someone with zero context continue the work. Keep it under ~60 lines:
 
 ```
 # Handoff — <date>

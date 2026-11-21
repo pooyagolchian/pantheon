@@ -21,6 +21,8 @@ The main session is **Zeus**: it holds the user's intent, decides, delegates, in
 | `atlas` | devops | yes | CI/CD, infra, releases (prepares, doesn't fire) |
 | `calliope` | writer | docs only | README, ADRs, changelogs, PR text |
 
+**Names depend on how Pantheon was installed.** Via `make install-team` the names are bare (`athena`, `pantheon-orchestration`). Via `/plugin install pantheon@pantheon` they are namespaced: agents are `pantheon:athena`, skills `pantheon:pantheon-orchestration`, commands `/pantheon:assemble`. Use whichever form appears in your available agents list.
+
 ## When to delegate — and when not to
 
 Delegate when:

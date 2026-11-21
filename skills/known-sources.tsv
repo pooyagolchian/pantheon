@@ -62,3 +62,25 @@ site-architecture	coreyhaines31/marketingskills
 sms	coreyhaines31/marketingskills
 social	coreyhaines31/marketingskills
 video	coreyhaines31/marketingskills
+# pinned to vendor: upstream leonxlnx/taste-skill restructured (2026-11) and no longer ships these
+full-output-enforcement	vendor
+brandkit	vendor
+gpt-taste	vendor
+high-end-visual-design	vendor
+image-to-code	vendor
+imagegen-frontend-mobile	vendor
+imagegen-frontend-web	vendor
+industrial-brutalist-ui	vendor
+minimalist-ui	vendor
+redesign-existing-projects	vendor
+stitch-design-taste	vendor
+# resolved by matching SKILL.md against skills.sh search hits (2026-11-21)
+application-form-filler	paramchoudhary/resumeskills
+cover-letter-generator	paramchoudhary/resumeskills
+job-description-analyzer	paramchoudhary/resumeskills
+resume-ats-optimizer	paramchoudhary/resumeskills
+resume-bullet-writer	paramchoudhary/resumeskills
+resume-version-manager	paramchoudhary/resumeskills
+tailored-resume-generator	composiohq/awesome-claude-skills
+seo-aeo-audit	warpdotdev/oz-skills
+seo-geo	resciencelab/opc-skills

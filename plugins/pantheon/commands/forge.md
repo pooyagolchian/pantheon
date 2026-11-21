@@ -3,6 +3,8 @@ description: Execute an implementation plan task by task — hephaestus builds, 
 argument-hint: <path to plan file, or paste the plan>
 ---
 
+Agent names below are bare; if Pantheon was installed as a plugin, use the namespaced form shown in your agents list (e.g. `pantheon:athena`).
+
 Execute this plan with the Pantheon team: $ARGUMENTS
 
 1. Read the plan. Build a task list (TodoWrite) with each task's files, done-check and dependencies. If a task lacks a runnable done-check, define one before starting.

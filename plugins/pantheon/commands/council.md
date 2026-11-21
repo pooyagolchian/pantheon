@@ -3,7 +3,11 @@ description: Convene the review council — argus (correctness), nemesis (securi
 argument-hint: [diff target: branch, PR number, path — default: uncommitted changes]
 ---
 
-Convene the Pantheon review council on: ${ARGUMENTS:-the current uncommitted changes (git diff + git diff --staged)}
+Agent names below are bare; if Pantheon was installed as a plugin, use the namespaced form shown in your agents list (e.g. `pantheon:athena`).
+
+Convene the Pantheon review council on: $ARGUMENTS
+
+If no target is given above, review the current uncommitted changes (`git diff` + `git diff --staged`).
 
 1. Work out the exact diff command for the target (for a PR number, `gh pr diff <n>`; for a branch, `git diff $(git merge-base HEAD main)...<branch>`). Note the changed files.
 2. In **one message**, dispatch three subagents in parallel, each given the same diff command and file list, and *not* your own opinion of the change:

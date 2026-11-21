@@ -87,7 +87,9 @@ make capture                                              # re-snapshot this mac
    /plugin marketplace add pooyagolchian/pantheon
    /plugin install pantheon@pantheon
    ```
-   Commands are then namespaced (`/pantheon:assemble`). Use one route or the other, not both, or the agents will appear twice. `make doctor` warns if both are present.
+   Commands and agents are then namespaced (`/pantheon:assemble`, `pantheon:athena`). Use one route or the other, not both, or the agents will appear twice. `make doctor` warns if both are present.
+
+The whole team costs about 1.2k tokens of always-loaded context per session (`claude plugin details pantheon`). Agent and skill bodies load only when used.
 
 ## Safety model
 
