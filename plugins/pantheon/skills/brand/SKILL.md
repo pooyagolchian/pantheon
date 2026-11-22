@@ -35,6 +35,17 @@ The structure of `BRAND.md` is defined in `references/brand-template.md`. Keep i
 5. **Brand rules beat general rules.** If `BRAND.md` allows something the general guidance below bans (em-dashes, exclamation marks, a word on the AI-isms list), the brand wins.
 6. **Report what you changed and what you couldn't verify.** End every run with a short list of changes and open `[unverified]` items.
 
+## Gotchas
+
+These come from real extraction runs:
+
+- **Old brand docs describe a brand that has moved on.** Persona files and older brand skills can contain a previous offer, title or proof point. Check every fact against the live site and against dated owner decisions (often written as code comments) before trusting a document. Recency beats source type.
+- **The real guidelines are rarely in `docs/brand.md`.** Look in `.claude/skills/*`, `docs/adr/`, `docs/memory-bank/`, `.specify/` and `specs/`, and search the repo broadly before concluding there are none.
+- **Brand vocabulary collides with the AI-isms list.** An "agent harness" company needs "harness". Record such words as allowed exceptions instead of rewriting the brand's own nouns.
+- **Self-reported metrics look like facts.** "Cut delivery time 40%" in a data file is still a claim. Mark it `observed` and use only the brand's existing wording.
+- **Live pages can hold personal data.** CVs and contact pages may show phone numbers or personal email. `BRAND.md` keeps only brand contact channels.
+- **Browser tools leave files behind.** Playwright MCP writes `.playwright-mcp/` into the working directory. Clean it up.
+
 ## Boundaries
 
 - Brand voice from sales calls, Slack or enterprise drives is the `brand-voice` plugin's job, if installed. This skill reads public and repo sources. If `.claude/brand-voice-guidelines.md` exists, treat it as an input to extract.
