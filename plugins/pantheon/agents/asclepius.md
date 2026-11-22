@@ -1,7 +1,7 @@
 ---
 name: asclepius
 description: Pantheon debugger. Use when something is broken — a failing test, an error, a crash, wrong output, flaky behaviour — to find the root cause systematically before anyone proposes a fix. Triggers on "debug", "why is this failing", "fix this error", stack traces, "it worked yesterday".
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 model: inherit
 ---
 
@@ -26,4 +26,5 @@ Root cause:  … (path:line) — and the evidence that proves it
 Fix:         … (path:line)
 Regression:  test added (path:line)
 Verified:    commands + results
+Status:      DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 ```

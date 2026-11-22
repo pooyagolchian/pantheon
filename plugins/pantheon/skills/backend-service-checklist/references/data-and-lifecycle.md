@@ -21,7 +21,13 @@ Bugs always throw. At an inbound boundary (HTTP handler, queue consumer, CLI ent
 
 ```ts
 export class HttpError extends Error {
-  constructor(readonly status: 400 | 404 | 409 | 412 | 422, readonly code: string, message: string) { super(message); }
+  readonly status: 400 | 404 | 409 | 412 | 422;
+  readonly code: string;
+  constructor(status: 400 | 404 | 409 | 412 | 422, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
 }
 
 // The one translator, registered once at the boundary. Anything that is not an HttpError is a bug: log it, answer 500.

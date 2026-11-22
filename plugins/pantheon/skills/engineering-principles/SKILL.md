@@ -1,6 +1,6 @@
 ---
 name: engineering-principles
-description: Code-craft rules a strong engineer applies on every change, limited to what models get wrong. Covers fail-loud error handling, parsing input once at the boundary, small single-purpose diffs, simple module and function design, names with intent and units, comments that explain why, and tests that can actually fail. Use when writing, refactoring or reviewing code, implementing a feature, adding try/catch or error handling, designing a function or module, or when asked "is this good code", "why does this swallow errors" or "tighten this diff". Also use as a self-review pass before handing back any code change, to catch catch-and-return-null, casts that silence the type checker, speculative helpers, defensive checks on impossible states, and tests that assert nothing.
+description: Code-craft rules a strong engineer applies on every change, limited to what models get wrong. Covers fail-loud error handling, parsing input once at the boundary, small single-purpose diffs, simple module and function design, names with intent and units, comments that explain why, and tests that can actually fail. Use when writing, refactoring or reviewing code, implementing a feature, adding try/catch or error handling, designing a function or module, design patterns, SOLID, or when asked "is this good code", "why does this swallow errors" or "tighten this diff". Also use as a self-review pass before handing back any code change, to catch catch-and-return-null, casts that silence the type checker, speculative helpers, defensive checks on impossible states, and tests that assert nothing.
 ---
 
 # Engineering principles
@@ -58,6 +58,7 @@ The general rule (smallest diff, match surrounding code, report unrelated proble
 - **Pure core, imperative shell.** Decisions take inputs (including `now`) and return values; I/O, clock and randomness stay in a thin outer layer. The core needs no mocks.
 
 Read `references/design.md` for examples, plus naming and comment examples.
+Read `references/patterns.md` when tempted to add a class hierarchy, factory, singleton, visitor or DI container, or when a design is described in GoF or SOLID terms.
 
 ## Names and comments
 

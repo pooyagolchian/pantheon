@@ -5,7 +5,7 @@ description: How the main session leads the Pantheon agent team — deciding whe
 
 # Pantheon orchestration
 
-The main session is **Zeus**: it holds the user's intent, decides, delegates, integrates, and verifies. Subagents can't spawn subagents and can't see this conversation, so orchestration always happens here.
+The main session is **Zeus**: it holds the user's intent, decides, delegates, integrates, and verifies. Subagents can't see this conversation, and Pantheon agents deliberately leave `Agent` out of their tool lists so they can't spawn subagents of their own. Orchestration always happens here.
 
 ## The team
 
@@ -14,9 +14,11 @@ The main session is **Zeus**: it holds the user's intent, decides, delegates, in
 | `metis` | researcher | no | docs, APIs, versions, "how does this repo do X" |
 | `athena` | architect | no | design + task plan before non-trivial work |
 | `hephaestus` | builder | yes | implementing one scoped task, test-first |
+| `proteus` | refactorer | yes | restructuring with no behaviour change: extract, rename, dedupe, strangle legacy |
 | `asclepius` | debugger | yes | root-causing failures, then fixing |
 | `argus` | reviewer | no | correctness review of a diff |
 | `nemesis` | security | no | attack-surface review |
+| `apollo` | UI critic | no | usability, responsive and WCAG 2.2 AA checks in the running app, when UI changes |
 | `themis` | verifier | tests only | proving the goal works, end to end |
 | `atlas` | devops | yes | CI/CD, infra, releases (prepares, doesn't fire) |
 | `calliope` | writer | docs only | README, ADRs, changelogs, PR text |
@@ -56,13 +58,26 @@ The brief is the subagent's entire world. Include:
 4. **Done-check** — the command or observation that proves completion.
 5. **Report shape** — what to return (the agents define a default; override if you need something specific).
 
+**Choose the model per brief.** An agent with `model: inherit` (or no model) runs on the session's model, often the most expensive one. Mechanical 1–2 file tasks can take a cheaper model through the Agent call's `model` parameter; design and subtle review get the most capable one. The parameter takes an alias (`haiku`, `sonnet`, `opus`, `fable`), not a full model ID or `inherit`, and overrides the agent's frontmatter `model`.
+
 Bad: "Fix the login bug." Good: "Login with an expired refresh token returns 500 instead of 401 (repro: `npm test -- auth.spec.ts -t expired`). Root cause is likely in `src/auth/refresh.ts`; don't change the token format. Done when that test passes and `npm test` is green."
 
 ## Parallelism
 
 - Independent agents go in **one message with multiple Agent calls** so they run concurrently.
 - Never let two writers touch the same files at once. Split by file ownership, or sequence them, or give each a git worktree (`isolation: "worktree"`).
-- Readers (metis, athena, argus, nemesis) can always run in parallel.
+- Readers (metis, athena, argus, nemesis, apollo) can always run in parallel. One exception: the browser is shared, so don't run two browser-driving agents (apollo, or themis exercising a UI) at the same time.
+
+## Acting on a report's status
+
+Builders (hephaestus, proteus, asclepius, themis, atlas) end their report with a status:
+
+- `DONE` — re-run the decisive check yourself, then move on.
+- `DONE_WITH_CONCERNS` — read the concerns before moving on. Fix the ones that affect correctness or scope; surface the rest to the user in the final report.
+- `BLOCKED` — don't re-dispatch the same brief. Remove the blocker (a decision, access, a failing dependency), or take it to the user if the decision is theirs.
+- `NEEDS_CONTEXT` — answer the questions and resume the same agent (`SendMessage`) rather than starting a fresh one; if it can't be resumed, dispatch a fresh one with its previous report and your answers in the brief.
+
+Fix loops are capped at 5 rounds: rounds 1–3 resume the same builder (`SendMessage`), rounds 4–5 go to a fresh builder (optionally a stronger model). After round 5, stop and report to the user. If `SendMessage` can't resume the agent, dispatch a fresh builder with its previous report and the findings in the brief.
 
 ## Verifying results
 

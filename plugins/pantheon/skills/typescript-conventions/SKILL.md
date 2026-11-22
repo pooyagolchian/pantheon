@@ -54,7 +54,7 @@ Bugs always throw. At an inbound boundary (HTTP handler, queue consumer, CLI ent
 ## Modules
 
 - **`import type` / `export type`** for type-only symbols. `verbatimModuleSyntax` enforces it; it keeps type stripping and bundlers from emitting or dropping the wrong imports.
-- **No barrel files (`index.ts` re-exporting a folder) in app code.** They pull whole folders into every import, slow type-checking and test startup, and are the usual source of import cycles. Import from the defining file. A package's single public entry point is the exception.
+- **No barrel files (`index.ts` re-exporting a folder) in app code.** They pull whole folders into every import, slow type-checking and test startup, and are the usual source of import cycles. Import from the defining file. A package's single public entry point is the exception, and so is a feature folder's single public entry when module boundaries are enforced (named re-exports only, never `export *`).
 - **Explicit return types on exported functions.** They stop internal types leaking into the API, keep a changed body from silently changing callers, and speed up checking. Required anyway under `isolatedDeclarations`.
 - **Named exports only.** Default exports get renamed at every import site, auto-import and rename refactors handle them worse, and they interoperate badly with CommonJS consumers. Use a default export only where a framework demands it (route files, config files, stories).
 

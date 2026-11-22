@@ -4,7 +4,7 @@
 
 # <img src="docs/assets/logo.png" alt="" width="40" align="top"> Pantheon
 
-**An AI team and harness for Claude Code.** Nine specialist agents, orchestration commands, agentic-programming skills, a safety hook, and a curated, reproducible collection of ~175 skills (from [skills.sh](https://skills.sh)) and plugins. Install it all, or any part of it, onto any machine with `make`, and remove it again cleanly.
+**An AI team and harness for Claude Code.** Eleven specialist agents, orchestration commands, agentic-programming skills, a safety hook, and a curated, reproducible collection of ~175 skills (from [skills.sh](https://skills.sh)) and plugins. Install it all, or any part of it, onto any machine with `make`, and remove it again cleanly.
 
 ```bash
 git clone https://github.com/pooyagolchian/pantheon ~/pantheon && cd ~/pantheon
@@ -23,8 +23,10 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 | `athena` | architect: design + task plan | — | opus |
 | `hephaestus` | builder: implements one task, test-first | ✓ | inherit |
 | `asclepius` | debugger: root cause, then fix + regression test | ✓ | inherit |
+| `proteus` | refactorer: restructures without changing behavior, pinned by tests | ✓ | inherit |
 | `argus` | reviewer: correctness, regressions, silent failures | — | opus |
 | `nemesis` | security red team: attack paths | — | opus |
+| `apollo` | UI critic: design, accessibility, responsive checks on the running app (browser tools need the `playwright` plugin from `make install-plugins`) | — | sonnet |
 | `themis` | verifier: tests + end-to-end proof | tests | inherit |
 | `atlas` | devops: CI/CD, infra, releases (prepares, never fires) | ✓ | inherit |
 | `calliope` | writer: README, ADRs, changelogs, PR text | docs | sonnet |
@@ -34,7 +36,7 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 | Command | What it does |
 |---|---|
 | `/assemble <task>` | Full pipeline: scout → plan → build → review → fix → verify |
-| `/council [target]` | argus + nemesis + themis review a diff in parallel; one ranked table |
+| `/council [target]` | argus + nemesis + themis review a diff in parallel (plus apollo when UI changed); one ranked table |
 | `/forge <plan>` | Execute a plan task by task, with review per task |
 | `/scout <question>` | metis researches and returns a sourced answer |
 | `/handoff [path]` | Write `HANDOFF.md` so a fresh session can continue |
@@ -51,6 +53,10 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 - `backend-service-checklist`: production readiness for services and APIs: timeouts, retries with jitter, idempotency keys, cursor pagination, backpressure, graceful shutdown.
 - `typescript-conventions`: a strict tsconfig baseline, narrowing over casting, discriminated unions, branded types, and an explicit error policy.
 - `design-principles`: one design reference distilled from the best design skills, with exact numbers for spacing, type, OKLCH color and contrast, motion and states. It resolves the conflicts between sources and lists the AI-UI tells to avoid.
+- `changing-legacy-code`: change untested code safely: pinch points, the smallest seam, sprout and wrap, a light Mikado loop, branch by abstraction.
+- `test-portfolio-and-doubles`: choose the test level from risk, state-based by default, a fake/stub/mock/spy decision table, the outside-in double loop.
+- `module-boundaries`: enforce dependency direction with dependency-cruiser, eslint-plugin-boundaries, knip and import-linter, using ratchet baselines so existing code can adopt them gradually.
+- `engineering-principles` also has a patterns reference that maps each GoF pattern to its native TypeScript or Python idiom and lists SOLID over-use smells.
 
 ### Works alongside other plugins
 
@@ -81,7 +87,7 @@ Every skill in `skills/manifest.tsv` has a profile. Run `make profiles` for coun
 
 Installing every skill costs context in every session (each description is always loaded), so pick the profiles you need on a given machine. Rarely used skills can be set to `name-only` or `off` in `core/settings.json` → `skillOverrides`.
 
-The `engineering` profile adds vetted third-party skills for security-focused diff review (`differential-review`), API misuse-resistance (`sharp-edges`), property-based testing, API and module design (`api-and-interface-design`, `codebase-design`), performance, Postgres, ADRs, observability, hardening and deprecation. Overlapping or niche skills are `name-only`, mostly in `design` and `frontend`, plus `property-based-testing`, `sharp-edges` and `deprecation-and-migration`. You can still call them by name, but their descriptions no longer load into every session. For design work, `design-principles` names the specialists to load.
+The `engineering` profile adds vetted third-party skills for security-focused diff review (`differential-review`), API misuse-resistance (`sharp-edges`), property-based testing, API and module design (`api-and-interface-design`, `codebase-design`), DDD and hexagonal architecture (`clean-ddd-hexagonal`), characterization tests for legacy code (`characterisation-tests`, vendored and trimmed), performance, Postgres, ADRs, observability, hardening and deprecation. Overlapping or niche skills are `name-only`, mostly in `design` and `frontend`, plus `property-based-testing`, `sharp-edges` and `deprecation-and-migration`. You can still call them by name, but their descriptions no longer load into every session. For design work, `design-principles` names the specialists to load.
 
 ### Managing skills
 

@@ -1,7 +1,7 @@
 ---
 name: hephaestus
 description: Pantheon builder. Use to implement a well-defined task or one task of a plan — writes production code test-first, matches the surrounding code, and proves it works before reporting. Triggers on "implement", "build this task", "write the code for", executing plan steps.
-tools: Read, Edit, Write, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 model: inherit
 ---
 
@@ -22,6 +22,7 @@ Done:      what changed, file by file (path:line)
 Verified:  exact commands run and their result
 Not done:  anything skipped or deferred, and why
 Notice:    unrelated issues spotted (not fixed)
+Status:    DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 ```
 
 ## Never

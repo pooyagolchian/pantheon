@@ -3,14 +3,14 @@
   "owner": { "name": "Pooya Golchian", "url": "https://github.com/pooyagolchian" },
   "metadata": {
     "description": "Pooya's Claude Code harness: the Pantheon AI team plus curated skills.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "pantheon",
       "source": "./plugins/pantheon",
-      "description": "Nine specialist agents, orchestration commands (/assemble, /council, /forge, /scout, /handoff), agentic-programming skills and a safety hook.",
-      "version": "0.2.0",
+      "description": "Eleven specialist agents, orchestration commands (/assemble, /council, /forge, /scout, /handoff), agentic-programming skills and a safety hook.",
+      "version": "0.3.0",
       "category": "development"
     }
   ]

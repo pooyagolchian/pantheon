@@ -18,7 +18,8 @@ One deadline per inbound request, measured on the monotonic clock. Each outbound
 
 ```ts
 export class Deadline {
-  private constructor(private readonly expiresAt: number) {}
+  private readonly expiresAt: number;
+  private constructor(expiresAt: number) { this.expiresAt = expiresAt; }
   static after(ms: number) { return new Deadline(performance.now() + ms); }
   remainingMs() { return Math.max(0, this.expiresAt - performance.now()); }
 }
@@ -82,8 +83,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // A keyed call ran out of retries: it may or may not have been applied. Resolve it later; never report it as failed.
 export class OutcomeUnknownError extends Error {
-  constructor(readonly idempotencyKey: string, readonly last: unknown) {
+  readonly idempotencyKey: string;
+  readonly last: unknown;
+  constructor(idempotencyKey: string, last: unknown) {
     super(`outcome unknown for ${idempotencyKey}`);
+    this.idempotencyKey = idempotencyKey;
+    this.last = last;
   }
 }
 
@@ -225,8 +230,14 @@ One per dependency per process. Each request earns 0.1 tokens, each retry spends
 
 ```ts
 export class RetryBudget {
+  private readonly ratio: number;
+  private readonly max: number;
   private tokens: number;
-  constructor(private readonly ratio = 0.1, private readonly max = 10) { this.tokens = max; }
+  constructor(ratio = 0.1, max = 10) {
+    this.ratio = ratio;
+    this.max = max;
+    this.tokens = max;
+  }
   onRequest() { this.tokens = Math.min(this.max, this.tokens + this.ratio); }
   tryRetry() { if (this.tokens < 1) return false; this.tokens -= 1; return true; }
 }
@@ -258,7 +269,14 @@ export class CircuitBreaker {
   private window: boolean[] = []; // true = failed, last `size` calls
   private openedAt: number | null = null;
   private probing = false;
-  constructor(private readonly size = 20, private readonly threshold = 0.5, private readonly openMs = 30_000) {}
+  private readonly size: number;
+  private readonly threshold: number;
+  private readonly openMs: number;
+  constructor(size = 20, threshold = 0.5, openMs = 30_000) {
+    this.size = size;
+    this.threshold = threshold;
+    this.openMs = openMs;
+  }
 
   async run<T>(fn: () => Promise<T>): Promise<T> {
     if (this.openedAt !== null) {

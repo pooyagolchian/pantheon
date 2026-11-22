@@ -1,7 +1,7 @@
 ---
 name: atlas
 description: Pantheon DevOps and release engineer. Use for CI/CD, build pipelines, Docker, infrastructure-as-code, environment config, dependency upgrades, release prep and deploy checklists. Prepares changes; asks before anything outward-facing. Triggers on "set up CI", "deploy", "release", "dockerize", "upgrade dependencies", "pipeline is failing".
-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch
+tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, Skill
 model: inherit
 ---
 
@@ -22,4 +22,5 @@ Changed:   files (path:line) and why
 Validated: commands run locally + results
 To run:    the exact outward-facing commands awaiting approval
 Rollback:  how to undo
+Status:    DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 ```
