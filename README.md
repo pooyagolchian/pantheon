@@ -47,6 +47,10 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 - `harness-engineering`: settings, permissions, hooks, agents, plugins and marketplaces.
 - `verify-app`: proves a change works by driving the real app (browser, CLI/TUI, HTTP API) against acceptance checks, asserting on state and saving evidence. `themis` uses it.
 - `brand`: extracts a brand profile (`BRAND.md`: facts, voice, visual identity, imagery, SEO/AEO entity data) from a website or repo, then writes copy and reviews UI against it. Works for any company, product or personal brand.
+- `engineering-principles`: code-craft rules models get wrong: a fail-loud error contract, validating at boundaries, diff discipline, deep modules, and tests that actually assert.
+- `backend-service-checklist`: production readiness for services and APIs: timeouts, retries with jitter, idempotency keys, cursor pagination, backpressure, graceful shutdown.
+- `typescript-conventions`: a strict tsconfig baseline, narrowing over casting, discriminated unions, branded types, and an explicit error policy.
+- `design-principles`: one design reference distilled from the best design skills, with exact numbers for spacing, type, OKLCH color and contrast, motion and states. It resolves the conflicts between sources and lists the AI-UI tells to avoid.
 
 ### Works alongside other plugins
 
@@ -73,9 +77,11 @@ make uninstall                       # removes only what Pantheon installed
 
 Every skill in `skills/manifest.tsv` has a profile. Run `make profiles` for counts and `make list` for names.
 
-`core` · `frontend` · `design` · `marketing` · `docs` · `career` · `personal`
+`core` · `engineering` · `frontend` · `design` · `marketing` · `docs` · `career` · `personal`
 
 Installing every skill costs context in every session (each description is always loaded), so pick the profiles you need on a given machine. Rarely used skills can be set to `name-only` or `off` in `core/settings.json` → `skillOverrides`.
+
+The `engineering` profile adds vetted third-party skills for security-focused diff review (`differential-review`), API misuse-resistance (`sharp-edges`), property-based testing, API and module design (`api-and-interface-design`, `codebase-design`), performance, Postgres, ADRs, observability, hardening and deprecation. Overlapping or niche skills are `name-only`, mostly in `design` and `frontend`, plus `property-based-testing`, `sharp-edges` and `deprecation-and-migration`. You can still call them by name, but their descriptions no longer load into every session. For design work, `design-principles` names the specialists to load.
 
 ### Managing skills
 
@@ -133,3 +139,7 @@ docs/best-practices.md            the Claude Code practices this harness encodes
 ## License
 
 Pantheon's own files are MIT. Skills in `skills/vendor/` and those installed from the manifest keep their authors' licenses.
+
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Pantheon emblem: the Greek letter Pi as a temple gate of two ember-veined columns inside a teal Greek-key ring" width="320">
+</p>

@@ -75,6 +75,17 @@ docs	anthropics/skills	pdf
 docs	anthropics/skills	pptx
 docs	anthropics/skills	slack-gif-creator
 docs	anthropics/skills	xlsx
+engineering	addyosmani/agent-skills	api-and-interface-design
+engineering	mattpocock/skills	codebase-design
+engineering	addyosmani/agent-skills	deprecation-and-migration
+engineering	trailofbits/skills	differential-review
+engineering	addyosmani/agent-skills	documentation-and-adrs
+engineering	addyosmani/agent-skills	observability-and-instrumentation
+engineering	addyosmani/agent-skills	performance-optimization
+engineering	trailofbits/skills	property-based-testing
+engineering	addyosmani/agent-skills	security-and-hardening
+engineering	trailofbits/skills	sharp-edges
+engineering	supabase/agent-skills	supabase-postgres-best-practices
 frontend	addyosmani/web-quality-skills	accessibility
 frontend	wshobson/agents	accessibility-compliance
 frontend	addyosmani/web-quality-skills	best-practices
