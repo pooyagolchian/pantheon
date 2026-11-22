@@ -77,7 +77,7 @@ make uninstall                       # removes only what Pantheon installed
 
 Every skill in `skills/manifest.tsv` has a profile. Run `make profiles` for counts and `make list` for names.
 
-`core` · `engineering` · `frontend` · `design` · `marketing` · `docs` · `career` · `personal`
+`core` · `engineering` · `frontend` · `design` · `marketing` · `docs` · `career`
 
 Installing every skill costs context in every session (each description is always loaded), so pick the profiles you need on a given machine. Rarely used skills can be set to `name-only` or `off` in `core/settings.json` → `skillOverrides`.
 

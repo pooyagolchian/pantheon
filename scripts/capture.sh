@@ -40,7 +40,6 @@ profile_for() {
     resume-*|cover-letter-*|job-description-*|application-form-filler|tailored-resume-*|rendercv) echo career; return ;;
     docx|pdf|pptx|xlsx|doc-coauthoring|internal-comms|slack-gif-creator) echo docs; return ;;
     microsoft-*|azure-*|aws-*|cloudflare-*) echo cloud; return ;;
-    pooya-*) echo personal; return ;;
     differential-review|property-based-testing|sharp-edges|api-and-interface-design|performance-optimization|documentation-and-adrs|observability-and-instrumentation|security-and-hardening|deprecation-and-migration|supabase-postgres-best-practices|codebase-design) echo engineering; return ;;
     seo*|*-seo|ai-seo|schema|programmatic-seo|site-architecture|product-hunt-launch) echo marketing; return ;;
     next*|react*|vercel*|turborepo|shadcn|tailwind*|core-web-vitals|performance|web-quality-audit|best-practices|accessibility*|*-accessibility|fixing-*|responsive-design|building-components|frontend-ui-engineering|improve-react|web-artifacts-builder) echo frontend; return ;;
@@ -56,6 +55,7 @@ vendored=0; sourced=0; skipped=""
 for path in "$CLAUDE_DIR"/skills/*; do
   name="$(basename "$path")"
   [ "$name" = synced ] && continue                       # claude.ai sync bucket — never touch
+  case "$name" in pooya-*) continue ;; esac              # personal skills stay local, never published
   [ -f "$path/SKILL.md" ] || continue
   target="$(readlink "$path" 2>/dev/null || true)"
   case "$target" in "$ROOT/plugins/"*) continue ;; esac  # Pantheon's own skills
