@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/header.jpg" alt="Pantheon: nine robed marble statues of Greek gods in a cliff-top temple above the Aegean at sunset, under the title An AI team for Claude Code" width="100%">
+  <img src="docs/assets/header.jpg" alt="Pantheon: a dark marble temple at night with a bronze Antikythera gear mechanism in its pediment and geometric construction drawings in the sky, nine statues of the team between the columns, under the title An AI team and harness for Claude Code" width="100%">
 </p>
 
 # <img src="docs/assets/logo.png" alt="" width="40" align="top"> Pantheon
