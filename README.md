@@ -1,4 +1,8 @@
-# Pantheon
+<p align="center">
+  <img src="docs/assets/header.jpg" alt="Pantheon: nine robed marble statues of Greek gods in a cliff-top temple above the Aegean at sunset, under the title An AI team for Claude Code" width="100%">
+</p>
+
+# <img src="docs/assets/logo.png" alt="" width="40" align="top"> Pantheon
 
 **An AI team and harness for Claude Code.** Nine specialist agents, orchestration commands, agentic-programming skills, a safety hook, and a curated, reproducible collection of ~175 skills (from [skills.sh](https://skills.sh)) and plugins. Install it all, or any part of it, onto any machine with `make`, and remove it again cleanly.
 
