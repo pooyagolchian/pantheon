@@ -45,6 +45,12 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 - `agentic-workflow`: the explore → plan → implement → verify → commit loop.
 - `context-engineering`: CLAUDE.md, rules, skills, hooks and memory, and where each belongs.
 - `harness-engineering`: settings, permissions, hooks, agents, plugins and marketplaces.
+- `verify-app`: proves a change works by driving the real app (browser, CLI/TUI, HTTP API) against acceptance checks, asserting on state and saving evidence. `themis` uses it.
+- `brand`: extracts a brand profile (`BRAND.md`: facts, voice, visual identity, imagery, SEO/AEO entity data) from a website or repo, then writes copy and reviews UI against it. Works for any company, product or personal brand.
+
+### Works alongside other plugins
+
+Pantheon provides the team and the pipeline. It doesn't re-implement techniques that other plugins already do well. If [superpowers](https://github.com/obra/superpowers) is installed, the agents use its TDD, planning, debugging and worktree skills. For writing and evaluating skills, they use Anthropic's `skill-creator` and `claude plugin eval`.
 
 ## What gets installed
 
@@ -101,7 +107,7 @@ The whole team costs about 1.2k tokens of always-loaded context per session (`cl
 - **Tracked.** Everything created is recorded in `~/.claude/.pantheon/state`. Uninstall removes exactly those entries and nothing else.
 - **settings.json is merged, never replaced.** It is backed up before the first write. Your values always win. Uninstall removes only keys Pantheon added, and only if you haven't changed them since.
 - **Dry run first.** `make plan` or `DRY_RUN=1 make <target>`.
-- **Tested.** `make test` installs into a throwaway `HOME` pre-seeded with clashing user files. It checks the result, then uninstalls and requires `~/.claude` to be byte-identical to before.
+- **Tested.** `make test` installs into a throwaway `HOME` pre-seeded with clashing user files. It checks the result, then uninstalls and requires `~/.claude` to be byte-identical to before. It also checks skill quality: name format, size, linked references, and that no two skills compete for the same trigger.
 - **Guard hook.** `plugins/pantheon/hooks/guard.sh` blocks `rm -rf /` or `~`, force-push to main/master, `mkfs`, raw disk writes and fork bombs. It is deliberately narrow.
 
 ## Layout

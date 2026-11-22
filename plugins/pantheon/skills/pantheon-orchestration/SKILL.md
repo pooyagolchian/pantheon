@@ -23,6 +23,20 @@ The main session is **Zeus**: it holds the user's intent, decides, delegates, in
 
 **Names depend on how Pantheon was installed.** Via `make install-team` the names are bare (`athena`, `pantheon-orchestration`). Via `/plugin install pantheon@pantheon` they are namespaced: agents are `pantheon:athena`, skills `pantheon:pantheon-orchestration`, commands `/pantheon:assemble`. Use whichever form appears in your available agents list.
 
+## Working alongside other plugins
+
+Pantheon supplies the **team and the pipeline**. It deliberately doesn't re-implement inner-loop techniques that popular plugins already do well. When one of these is installed, the agents use it rather than improvising:
+
+| Need | Use if installed |
+|---|---|
+| Test-first implementation (hephaestus) | `superpowers:test-driven-development` |
+| Written plans (athena) and executing them (/forge) | `superpowers:writing-plans`, `superpowers:executing-plans` |
+| Root-causing failures (asclepius) | `superpowers:systematic-debugging` |
+| Isolated parallel work | `superpowers:using-git-worktrees`, or the Agent tool's `isolation: "worktree"` |
+| Writing or evaluating skills | `skill-creator`, `claude plugin eval` |
+
+If none of these is installed, the agents' own instructions are enough. Pass the relevant skill name in the brief so the subagent loads it.
+
 ## When to delegate — and when not to
 
 Delegate when:

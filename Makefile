@@ -88,10 +88,11 @@ status: ## What Pantheon has installed
 doctor: ## Check tools, links, settings and manifests
 	@$(PANTHEON) doctor
 
-validate: ## Validate the plugin/marketplace manifests and skill frontmatter
+validate: ## Validate manifests, frontmatter, and skill quality (structure + trigger overlap)
 	@claude plugin validate .
 	@claude plugin validate plugins/$(NAME)
 	@./tests/lint.sh
+	@./tests/skills.sh
 
 test: validate ## Lint + full install/uninstall round-trip in a throwaway HOME
 	@./tests/roundtrip.sh
