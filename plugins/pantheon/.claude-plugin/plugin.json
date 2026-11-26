@@ -6,5 +6,6 @@
   "homepage": "https://github.com/pooyagolchian/pantheon",
   "repository": "https://github.com/pooyagolchian/pantheon",
   "license": "MIT",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": ["agents", "orchestration", "team", "skills", "agentic-programming"]
 }
