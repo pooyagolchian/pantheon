@@ -99,7 +99,6 @@ frontend	ibelick/ui-skills	fixing-metadata
 frontend	ibelick/ui-skills	fixing-motion-performance
 frontend	addyosmani/agent-skills	frontend-ui-engineering
 frontend	millionco/react-doctor	improve-react
-frontend	vendor	next-best-practices
 frontend	vercel/next.js	next-cache-components-adoption
 frontend	vercel/next.js	next-cache-components-optimizer
 frontend	vercel/next.js	next-partial-prefetching-adoption
@@ -167,7 +166,6 @@ marketing	coreyhaines31/marketingskills	onboarding
 marketing	coreyhaines31/marketingskills	paywalls
 marketing	coreyhaines31/marketingskills	popups
 marketing	coreyhaines31/marketingskills	pricing
-marketing	vendor	product-hunt-launch
 marketing	coreyhaines31/marketingskills	product-marketing
 marketing	coreyhaines31/marketingskills	programmatic-seo
 marketing	coreyhaines31/marketingskills	prospecting

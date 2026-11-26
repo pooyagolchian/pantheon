@@ -15,6 +15,50 @@ make doctor      # verify
 
 New here? Run `/pantheon:onboard` (or `/onboard` after a Makefile install) for a guided tour that checks your setup and suggests a safe first task. You can also paste [`ONBOARDING.md`](plugins/pantheon/ONBOARDING.md) into Claude Code.
 
+## The full lifecycle: plan → verify → code → test → debug → fix → deploy
+
+Pantheon runs a change through the whole development loop. Each stage goes to a specialist with its own fresh context and its own gate, and the lead session (Zeus) only moves on when that gate passes.
+
+```mermaid
+flowchart LR
+    R[Research<br/>metis] --> P[Plan<br/>athena]
+    P --> V{Verify plan<br/>you approve}
+    V --> C[Code<br/>hephaestus · proteus]
+    C --> T[Test<br/>themis]
+    T -- fails --> D[Debug<br/>asclepius]
+    D --> F[Fix +<br/>regression test]
+    F --> T
+    T -- passes --> Rv[Review<br/>argus · nemesis · apollo]
+    Rv -- findings --> F
+    Rv -- clean --> Doc[Document<br/>calliope]
+    Doc --> S[Deploy<br/>atlas · you approve]
+```
+
+| Stage | Who | Command | What the stage has to show before the next one starts |
+|---|---|---|---|
+| **Research** | `metis` | `/scout` | Sourced answers from current docs (via ctx7) and the codebase, not from memory |
+| **Plan** | `athena` | `/assemble` step 2 | A design and ordered tasks grounded in the real code. Each task has files, a done-check and a test |
+| **Verify the plan** | you | `/assemble` stops here | You approve when the plan has risky or irreversible steps or open questions. Nothing is built before that |
+| **Code** | `hephaestus` (new behaviour), `proteus` (restructuring) | `/forge <plan>` | Test-first: a failing test, then the code, matching the surrounding style. `proteus` pins current behaviour with characterisation tests before moving anything |
+| **Test** | `themis` | `/assemble` step 6 | The suite, type checker and linter run for real, plus an end-to-end check of the actual app (`verify-app`), with saved evidence |
+| **Debug** | `asclepius` | ask: "why is this failing" | The root cause, reproduced, before anyone proposes a fix |
+| **Fix** | the builder, resumed with findings | `/assemble` step 5 | A fix plus a regression test that fails without it. At most 5 fix rounds, then it stops and reports instead of looping |
+| **Review** | `argus` (correctness), `nemesis` (security), `apollo` (UI and accessibility) | `/council` | Independent reviewers who see the diff, not the builder's reasoning, run in parallel. Unsubstantiated findings are dropped |
+| **Document** | `calliope` | `/assemble` step 7 | README, docs, changelog and ADRs checked against the code that shipped |
+| **Deploy** | `atlas` + `calliope` | `/ship` | Version bump, a green gate, exact release commands and a rollback. Nothing is tagged, pushed or deployed until you approve those commands |
+
+`/assemble <task>` runs the whole loop. You can also run any stage on its own: `/scout` to research, `/forge` to build a plan you already have, `/council` to review a diff, `/ship` to release.
+
+### Why this gets more out of Claude
+
+- **Focused context per stage.** A long single session fills up with file dumps and dead ends. Each specialist starts clean with a brief written for its job, and only its conclusion comes back to the lead.
+- **Plans before code.** Most wasted work comes from building the wrong thing. Planning against the real codebase and pausing for your approval catches that while it is still cheap.
+- **Tests that bite.** Builders write the test first, and fixes come with a regression test. A test that would still pass if the change were reverted doesn't count.
+- **Review that isn't anchored.** Reviewers get the diff and the goal, not the builder's opinion of the diff, so they find what the builder missed rather than agreeing with it.
+- **Verified, not reported.** Subagent reports are claims. The lead re-runs the decisive check itself before saying anything is done.
+- **Bounded loops and gated actions.** Fix rounds are capped. Anything outward-facing (push, publish, deploy) waits for you, and the guard hook stops the worst commands outright.
+- **Measured.** `make eval` runs the same tasks with and without the plugin and reports the difference. See [Evals](#evals) for what it shows today.
+
 ## The team
 
 The main session is **Zeus**, the lead: it holds your intent, delegates, integrates and verifies. The specialists are subagents. For their portraits, a detailed look at each one's job, and proposals for improving them, see **[Meet the team](docs/team.md)**.
@@ -117,7 +161,7 @@ make capture                                              # re-snapshot this mac
 
    A plugin can't install global rules, so the main session isn't told to delegate to the team. `/pantheon:onboard` shows the short "Team" block to add to your `CLAUDE.md`, and adds it if you say yes. The Makefile route installs it as `~/.claude/rules/pantheon.md`.
 
-The whole team costs about 1.2k tokens of always-loaded context per session (`claude plugin details pantheon`). Agent and skill bodies load only when used.
+The whole team costs about 1.2k tokens of always-loaded context per session (`claude plugin details pantheon`). The plugin route adds about 150 more: a `SessionStart` hook (`hooks/session-start.sh`) that tells the main session when to delegate to which agent. The Makefile route gets the same guidance from `core/rules/pantheon.md`. Agent and skill bodies load only when used.
 
 ## Safety model
 
@@ -136,8 +180,10 @@ The whole team costs about 1.2k tokens of always-loaded context per session (`cl
 - a debugging answer names the root cause rather than patching the symptom
 - a planning request gets a plan, not code
 - a review flags a prompt injection hidden in the diff and doesn't approve it
+- `review-cross-file`: a change that looks right on its own but breaks callers in two other files of a seeded sample project
+- `security-endpoint`: a new download route in a seeded Express app that has path traversal and no auth
 
-Each case runs with and without the plugin. The report shows the difference, plus whether the matching agent was dispatched. On these small cases plain Claude already passes, so the suite works as a regression check today, not as proof that the team helps. Harder, multi-file cases are where the team should show a difference.
+Each case runs with and without the plugin. The report shows the difference, plus whether the matching agent was dispatched. The last two cases seed a small codebase with their `setup.sh`, which is why `make eval` passes `--scaffold`. Current results (one run each, November 2026): every case passes with and without the plugin, so the difference is 0. Even in the seeded cases, the lead answered directly instead of dispatching an agent. Treat the suite as a regression check, not as proof that the team helps. Cases big enough that a single context struggles, such as a multi-step feature with tests to run, are where a difference should show, and they are the next ones to add.
 
 Evals run real Claude sessions on your own account, so the Makefile defaults are cheap and private: one run per case, a $5 ceiling, and a local report that is not published.
 

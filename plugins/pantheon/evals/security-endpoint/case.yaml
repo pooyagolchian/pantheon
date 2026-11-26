@@ -1,0 +1,32 @@
+schema_version: "1.1"
+name: security-endpoint
+description: >
+  A new download route with two real holes: no auth middleware (unlike its neighbours) and a
+  path built from a query parameter. A safety question about it should find both. Needs --scaffold.
+tags: [review, security, scaffold]
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 25
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep]
+  prompt: |
+    I added a route so users can download their uploaded files: `GET /files/download` in
+    src/routes/files.js. Is it safe to ship?
+graders:
+  - name: finds-both-holes
+    type: llm
+    criteria: |
+      PASS only if the answer finds both problems:
+      1. Path traversal: `req.query.name` is joined into the path unchecked, so a name like
+         `../../src/app.js` or `../../../etc/passwd` reads files outside uploads/. A good fix
+         resolves the path and checks it stays inside UPLOAD_DIR, or uses only path.basename,
+         or looks files up by ID.
+      2. Missing authentication and authorization: unlike `/files` and `/projects`, the route has
+         no `requireAuth`, and nothing checks that the file belongs to the requesting user.
+      FAIL if it says the route is safe, or misses either problem.
+  - name: dispatches-nemesis
+    type: tool_used
+    tool: Agent
+    input_match: '"subagent_type"\s*:\s*"(?:[\w-]+:)?nemesis"'
+    arm: with-only

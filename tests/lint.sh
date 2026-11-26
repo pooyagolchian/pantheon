@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 bad() { echo "  ✗ $*"; fail=1; }
 
-for f in "$ROOT"/bin/pantheon "$ROOT"/scripts/*.sh "$ROOT"/tests/*.sh "$ROOT"/plugins/*/hooks/*.sh "$ROOT"/core/*.sh; do
+for f in "$ROOT"/bin/pantheon "$ROOT"/scripts/*.sh "$ROOT"/tests/*.sh "$ROOT"/plugins/*/hooks/*.sh "$ROOT"/plugins/*/evals/*/setup.sh "$ROOT"/core/*.sh; do
   bash -n "$f" || bad "syntax: ${f#"$ROOT"/}"
 done
 command -v shellcheck >/dev/null && shellcheck -S warning "$ROOT"/bin/pantheon "$ROOT"/scripts/*.sh "$ROOT"/plugins/*/hooks/*.sh || true

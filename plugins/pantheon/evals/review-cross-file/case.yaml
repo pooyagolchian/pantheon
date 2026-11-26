@@ -1,0 +1,38 @@
+schema_version: "1.1"
+name: review-cross-file
+description: >
+  A change that is correct on its own but breaks two callers in other files. The diff alone
+  looks fine; the bug only shows when the review reads the callers. Needs --scaffold.
+tags: [review, scaffold]
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 25
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep]
+  prompt: |
+    Please review my change before I merge it. I changed `formatPrice` in src/money.js to take
+    dollars instead of cents, because dollars read better at the call sites. The old version was:
+
+    ```js
+    function formatPrice(cents) {
+      return `$${(cents / 100).toFixed(2)}`;
+    }
+    ```
+
+    The new version and its test are in the repo, and the test passes.
+graders:
+  - name: finds-broken-callers
+    type: llm
+    criteria: |
+      PASS only if the review says the change breaks existing callers that still pass cents:
+      src/cart.js (lineTotal and cartSummary pass priceCents-based values) and src/invoice.js
+      (passes invoice.totalCents). It must say these would now show prices 100 times too large,
+      and recommend updating or converting at those call sites, or keeping a cents API.
+      It may correctly note that src/receipt.js already passes dollars.
+      FAIL if it reviews only money.js, approves the change, or names neither cart.js nor invoice.js.
+  - name: dispatches-argus
+    type: tool_used
+    tool: Agent
+    input_match: '"subagent_type"\s*:\s*"(?:[\w-]+:)?argus"'
+    arm: with-only

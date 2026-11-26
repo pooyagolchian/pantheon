@@ -118,4 +118,4 @@ Load a specialist by name when the task outgrows this page. If it isn't installe
 - **Motion:** `animate` to build one animation, `emil-design-eng` and `apple-design` for feel and gestures, `animation-vocabulary` to name an effect, `improve-animations` or `find-animation-opportunities` for audits, `fixing-motion-performance` for jank.
 - **Systems and docs:** `design-system-patterns` for token architecture, `create-design-md` or `extract-design-system` to capture an existing design, `ui-ux-pro-max` for style and palette lookup tables.
 - **Audits:** `improve-ui`, `baseline-ui` (quick cleanup), `web-design-guidelines`, `accessibility` or `fixing-accessibility` (WCAG passes), `responsive-design`.
-- **Stack:** `tailwind-best-practices`, `shadcn`, `next-best-practices` for how to express these rules in that stack.
+- **Stack:** `tailwind-best-practices`, `shadcn`, `nextjs-app-router-patterns` for how to express these rules in that stack.

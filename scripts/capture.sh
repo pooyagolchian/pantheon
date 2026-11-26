@@ -41,7 +41,7 @@ profile_for() {
     docx|pdf|pptx|xlsx|doc-coauthoring|internal-comms|slack-gif-creator) echo docs; return ;;
     microsoft-*|azure-*|aws-*|cloudflare-*) echo cloud; return ;;
     differential-review|property-based-testing|sharp-edges|api-and-interface-design|performance-optimization|documentation-and-adrs|observability-and-instrumentation|security-and-hardening|deprecation-and-migration|supabase-postgres-best-practices|codebase-design|clean-ddd-hexagonal|characterisation-tests) echo engineering; return ;;
-    seo*|*-seo|ai-seo|schema|programmatic-seo|site-architecture|product-hunt-launch) echo marketing; return ;;
+    seo*|*-seo|ai-seo|schema|programmatic-seo|site-architecture) echo marketing; return ;;
     next*|react*|vercel*|turborepo|shadcn|tailwind*|core-web-vitals|performance|web-quality-audit|best-practices|accessibility*|*-accessibility|fixing-*|responsive-design|building-components|frontend-ui-engineering|improve-react|web-artifacts-builder) echo frontend; return ;;
   esac
   case "$src" in

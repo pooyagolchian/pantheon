@@ -112,9 +112,10 @@ EVAL_RUNS     ?= 1
 EVAL_ABLATION ?= with-without
 EVAL_BUDGET   ?= 5
 
+# --scaffold runs each case's setup.sh (this repo's own scripts) to seed a sample codebase.
 eval: ## Run the plugin eval suite (EVAL_RUNS=1, EVAL_BUDGET=5 USD, report stays local)
 	@claude plugin eval plugins/$(NAME) --runs $(EVAL_RUNS) --ablation $(EVAL_ABLATION) \
-	  --max-cost-usd $(EVAL_BUDGET) --no-publish \
+	  --max-cost-usd $(EVAL_BUDGET) --no-publish --scaffold \
 	  $(if $(CASE),--case '$(CASE)') $(if $(TAG),--tag '$(TAG)') $(EVAL_ARGS)
 
 eval-smoke: ## Quick check: smoke-tagged cases, one run each (about $0.50)
