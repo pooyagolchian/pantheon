@@ -104,8 +104,10 @@ link() {
 # unlink_recorded <path|dir/>: remove recorded links (one exact path, or everything
 # under a directory when the argument ends in /) and restore any backups.
 unlink_recorded() {
-  local target="$1" dst bak
-  for dst in $(records link); do
+  local target="$1" dst bak list
+  list="$(records link)"
+  while IFS= read -r dst; do
+    [ -n "$dst" ] || continue
     case "$target" in
       */) case "$dst" in "$target"*) ;; *) continue ;; esac ;;
       *)  [ "$dst" = "$target" ] || continue ;;
@@ -113,16 +115,21 @@ unlink_recorded() {
     if [ -L "$dst" ]; then
       case "$(readlink "$dst")" in
         "$ROOT"/*) run rm "$dst"; ok "removed ${dst#"$CLAUDE_DIR"/}" ;;
-        *) warn "${dst#"$CLAUDE_DIR"/} now points elsewhere — left alone" ;;
+        *) if [ ! -e "$dst" ]; then run rm "$dst"; ok "removed dangling ${dst#"$CLAUDE_DIR"/} (repo moved?)"
+           else warn "${dst#"$CLAUDE_DIR"/} now points elsewhere — left alone"; fi ;;
       esac
     fi
     unrecord link "$dst"
     bak="$(record_extra backup "$dst")"
     if [ -n "$bak" ]; then
-      if [ -e "$bak" ] || [ -L "$bak" ]; then run mv "$bak" "$dst"; ok "restored ${dst#"$CLAUDE_DIR"/} from backup"; fi
+      if [ -e "$dst" ] || [ -L "$dst" ]; then
+        warn "${dst#"$CLAUDE_DIR"/} was replaced since install — kept it; your original is still in ${bak#"$CLAUDE_DIR"/}"
+      elif [ -e "$bak" ] || [ -L "$bak" ]; then
+        run mv "$bak" "$dst"; ok "restored ${dst#"$CLAUDE_DIR"/} from backup"
+      fi
       unrecord backup "$dst" "$bak"
     fi
-  done
+  done <<< "$list"
 }
 
 # ---------------------------------------------------------------- settings.json
@@ -135,8 +142,10 @@ settings_write() { # settings_write <jq filter> [jq args...]
   if [ "$settings_backed_up" = 0 ]; then
     mkdir -p "$BACKUP_DIR"; cp "$SETTINGS" "$BACKUP_DIR/settings.json"; settings_backed_up=1
   fi
+  # Write through (cat >, not mv) so a symlinked settings.json stays a symlink and keeps its mode.
   local tmp="$SETTINGS.pantheon.tmp"
-  jq "$@" "$filter" "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+  ( umask 077; jq "$@" "$filter" "$SETTINGS" > "$tmp" ) || { rm -f "$tmp"; return 1; }
+  cat "$tmp" > "$SETTINGS"; rm -f "$tmp"
 }
 
 settings_get() { [ -f "$SETTINGS" ] && jq -c "$@" "$SETTINGS" || echo null; }
@@ -144,20 +153,22 @@ settings_get() { [ -f "$SETTINGS" ] && jq -c "$@" "$SETTINGS" || echo null; }
 # Merge core/settings.json two levels deep: a missing top-level key is added whole;
 # for objects present on both sides only missing sub-keys are added. Your values always win.
 merge_settings() {
-  local frag="$ROOT/core/settings.json" key sub path
+  local frag="$ROOT/core/settings.json" key sub path val
   [ -f "$frag" ] || return 0
   for key in $(jq -r 'keys[]' "$frag"); do
     path="$(jq -cn --arg k "$key" '[$k]')"
     if [ "$(settings_get --argjson p "$path" 'getpath($p)')" = null ]; then
-      settings_write '.[$k] = $v' --arg k "$key" --argjson v "$(jq -c --arg k "$key" '.[$k]' "$frag")"
-      record setting "$path"; ok "settings.$key"
+      val="$(jq -c --arg k "$key" '.[$k]' "$frag")"
+      settings_write '.[$k] = $v' --arg k "$key" --argjson v "$val"
+      record setting "$path" "$val"; ok "settings.$key"
     elif [ "$(jq -r --arg k "$key" '.[$k]|type' "$frag")" = object ]; then
       local added=0 kept=0
       for sub in $(jq -r --arg k "$key" '.[$k]|keys[]' "$frag"); do
         path="$(jq -cn --arg k "$key" --arg s "$sub" '[$k,$s]')"
         if [ "$(settings_get --argjson p "$path" 'getpath($p)')" = null ]; then
-          settings_write 'setpath($p; $v)' --argjson p "$path" --argjson v "$(jq -c --argjson p "$path" 'getpath($p)' "$frag")" >/dev/null
-          record setting "$path"; added=$((added+1))
+          val="$(jq -c --argjson p "$path" 'getpath($p)' "$frag")"
+          settings_write 'setpath($p; $v)' --argjson p "$path" --argjson v "$val" >/dev/null
+          record setting "$path" "$val"; added=$((added+1))
         else kept=$((kept+1)); fi
       done
       if [ "$added" -gt 0 ]; then ok "settings.$key: $added added, $kept of yours kept"
@@ -169,17 +180,25 @@ merge_settings() {
 }
 
 # Remove only the settings we added, and only if they still hold the value we wrote.
+# The written value is column 3 of the record; older state files without it fall back
+# to the repo's current fragment.
 unmerge_settings() {
-  local frag="$ROOT/core/settings.json" path removed=0
-  for path in $(records setting); do
-    if [ -f "$SETTINGS" ] && [ "$(settings_get --argjson p "$path" 'getpath($p)')" = "$(jq -c --argjson p "$path" 'getpath($p)' "$frag" 2>/dev/null || echo missing)" ]; then
+  local frag="$ROOT/core/settings.json" path wrote list removed=0
+  list="$(records setting)"
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    wrote="$(record_extra setting "$path")"
+    [ -n "$wrote" ] || wrote="$(jq -c --argjson p "$path" 'getpath($p)' "$frag" 2>/dev/null || echo missing)"
+    if [ ! -f "$SETTINGS" ]; then
+      skip "settings.json is gone — nothing to remove"
+    elif [ "$(settings_get --argjson p "$path" --argjson w "$wrote" 'getpath($p) == $w')" = true ]; then
       settings_write 'delpaths([$p]) | if ($p|length) > 1 and getpath($p[:-1]) == {} then delpaths([$p[:-1]]) else . end' --argjson p "$path" >/dev/null
       removed=$((removed+1))
     else
       skip "settings $(echo "$path" | jq -r 'join(".")') changed since install — left alone"
     fi
-    unrecord setting "$path"
-  done
+    if [ -n "$(record_extra setting "$path")" ]; then unrecord setting "$path" "$wrote"; else unrecord setting "$path"; fi
+  done <<< "$list"
   [ "$removed" = 0 ] || ok "settings: $removed entries Pantheon added were removed"
 }
 
@@ -191,13 +210,23 @@ install_guard_hook() {
   record hook "$GUARD"; ok "guard hook (PreToolUse/Bash)"
 }
 
+# Removes the hook command(s) recorded at install time, not the current $GUARD, so a
+# repo that moved since install is still cleaned up.
 uninstall_guard_hook() {
-  recorded hook "$GUARD" || return 0
-  settings_write '
-    .hooks.PreToolUse |= map(.hooks |= map(select(.command != $c)) | select(.hooks != []))
-    | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end
-    | if .hooks == {} then del(.hooks) else . end' --arg c "$GUARD"
-  unrecord hook "$GUARD"; ok "guard hook removed"
+  local c list
+  list="$(records hook)"
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    if [ -f "$SETTINGS" ]; then
+      settings_write '
+        .hooks.PreToolUse = ((.hooks.PreToolUse // [])
+          | map(.hooks = ((.hooks // []) | map(select(.command != $c)))) | map(select(.hooks != [])))
+        | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end
+        | if .hooks == {} then del(.hooks) else . end' --arg c "$c"
+      ok "guard hook removed"
+    fi
+    unrecord hook "$c"
+  done <<< "$list"
 }
 
 # ---------------------------------------------------------------- components
@@ -290,11 +319,12 @@ install_skills() {
 
 uninstall_skills() {
   step "skills"
-  local dst name names=""
-  for dst in $(records link); do
+  local dst name names="" list
+  list="$(records link)"
+  while IFS= read -r dst; do
     case "$dst" in "$CLAUDE_DIR/skills/"*) ;; *) continue ;; esac
     case "$(readlink "$dst" 2>/dev/null)" in "$ROOT/skills/vendor/"*) unlink_recorded "$dst" ;; esac
-  done
+  done <<< "$list"
   for name in $(records skill); do names="$names $name"; done
   [ -n "$names" ] || return 0
   # shellcheck disable=SC2086
@@ -352,9 +382,12 @@ skill_add() { # skill_add <source> <skill> [profile]
 skill_remove() { # skill_remove <skill>
   local name="${1:?usage: skill-remove SKILL=name}"
   local dst="$CLAUDE_DIR/skills/$name"
+  case "$name" in synced|*/*|.*) die "refusing to remove '$name'" ;; esac
   step "remove $name"
   if [ -L "$dst" ] && case "$(readlink "$dst")" in "$ROOT"/*) true ;; *) false ;; esac; then
     unlink_recorded "$dst"
+  elif skill_present "$name" && ! recorded skill "$name"; then
+    warn "$name was not installed by Pantheon — left alone (remove it yourself if you mean to)"
   elif skill_present "$name"; then
     runq $SKILLS_CLI remove -g -a claude-code -y "$name" || die "skills remove failed — see $LOG"
     unrecord skill "$name"; ok "uninstalled"

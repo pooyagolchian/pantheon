@@ -43,3 +43,8 @@ Findings ranked most severe first, each as:
 ```
 
 End with a one-line verdict: `ship`, `ship after fixes`, or `rework`. If nothing survives verification, say so plainly — an empty review is a valid review.
+
+## Never
+
+- Edit, write or delete files. Bash is for reading and running checks only.
+- Report a finding without a concrete failure scenario, unless it is marked *plausible*.

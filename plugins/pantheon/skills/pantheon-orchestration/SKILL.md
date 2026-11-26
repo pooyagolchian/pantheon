@@ -60,6 +60,8 @@ The brief is the subagent's entire world. Include:
 
 **Choose the model per brief.** An agent with `model: inherit` (or no model) runs on the session's model, often the most expensive one. Mechanical 1–2 file tasks can take a cheaper model through the Agent call's `model` parameter; design and subtle review get the most capable one. The parameter takes an alias (`haiku`, `sonnet`, `opus`, `fable`), not a full model ID or `inherit`, and overrides the agent's frontmatter `model`.
 
+**Effort is set per agent on purpose.** Readers and reviewers pin it (`argus` and `athena` high, `nemesis` xhigh, `metis` and `apollo` medium, `calliope` low), as do `proteus` and `asclepius` (high) and `themis` (medium). `hephaestus` and `atlas` deliberately inherit the session's effort: their tasks range from a one-line config change to a multi-file feature, so the session's setting is the better guide.
+
 Bad: "Fix the login bug." Good: "Login with an expired refresh token returns 500 instead of 401 (repro: `npm test -- auth.spec.ts -t expired`). Root cause is likely in `src/auth/refresh.ts`; don't change the token format. Done when that test passes and `npm test` is green."
 
 ## Parallelism

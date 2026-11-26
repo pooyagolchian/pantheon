@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/header.jpg" alt="Pantheon: a dark marble temple at night with a bronze Antikythera gear mechanism in its pediment and geometric construction drawings in the sky, nine statues of the team between the columns, under the title An AI team and harness for Claude Code" width="100%">
+  <img src="docs/assets/header.jpg" alt="Pantheon: a dark marble temple at night with a bronze Antikythera gear mechanism in its pediment and geometric construction drawings in the sky, eleven statues of the team between the columns, from Metis with her lamp to Calliope with her tablet, under the title An AI team and harness for Claude Code" width="100%">
 </p>
 
 # <img src="docs/assets/logo.png" alt="" width="40" align="top"> Pantheon
@@ -13,9 +13,11 @@ make install     # core + team + skills
 make doctor      # verify
 ```
 
+New here? Run `/pantheon:onboard` (or `/onboard` after a Makefile install) for a guided tour that checks your setup and suggests a safe first task. You can also paste [`ONBOARDING.md`](plugins/pantheon/ONBOARDING.md) into Claude Code.
+
 ## The team
 
-The main session is **Zeus**, the lead: it holds your intent, delegates, integrates and verifies. The specialists are subagents:
+The main session is **Zeus**, the lead: it holds your intent, delegates, integrates and verifies. The specialists are subagents. For their portraits, a detailed look at each one's job, and proposals for improving them, see **[Meet the team](docs/team.md)**.
 
 | Agent | Role | Edits code | Model |
 |---|---|---|---|
@@ -35,11 +37,13 @@ The main session is **Zeus**, the lead: it holds your intent, delegates, integra
 
 | Command | What it does |
 |---|---|
-| `/assemble <task>` | Full pipeline: scout → plan → build → review → fix → verify |
+| `/assemble <task>` | Full pipeline: scout → plan → build → review → fix → verify → document |
 | `/council [target]` | argus + nemesis + themis review a diff in parallel (plus apollo when UI changed); one ranked table |
 | `/forge <plan>` | Execute a plan task by task, with review per task |
 | `/scout <question>` | metis researches and returns a sourced answer |
 | `/handoff [path]` | Write `HANDOFF.md` so a fresh session can continue |
+| `/ship [version]` | atlas prepares the release (version, checks, exact commands, rollback) and calliope writes the changelog; stops for your approval |
+| `/onboard` | Guided first-run tour: checks your setup, explains the team, suggests a first task |
 
 ### Skills that ship with the team
 
@@ -111,6 +115,8 @@ make capture                                              # re-snapshot this mac
    ```
    Commands and agents are then namespaced (`/pantheon:assemble`, `pantheon:athena`). Use one route or the other, not both, or the agents will appear twice. `make doctor` warns if both are present.
 
+   A plugin can't install global rules, so the main session isn't told to delegate to the team. `/pantheon:onboard` shows the short "Team" block to add to your `CLAUDE.md`, and adds it if you say yes. The Makefile route installs it as `~/.claude/rules/pantheon.md`.
+
 The whole team costs about 1.2k tokens of always-loaded context per session (`claude plugin details pantheon`). Agent and skill bodies load only when used.
 
 ## Safety model
@@ -120,13 +126,34 @@ The whole team costs about 1.2k tokens of always-loaded context per session (`cl
 - **settings.json is merged, never replaced.** It is backed up before the first write. Your values always win. Uninstall removes only keys Pantheon added, and only if you haven't changed them since.
 - **Dry run first.** `make plan` or `DRY_RUN=1 make <target>`.
 - **Tested.** `make test` installs into a throwaway `HOME` pre-seeded with clashing user files. It checks the result, then uninstalls and requires `~/.claude` to be byte-identical to before. It also checks skill quality: name format, size, linked references, and that no two skills compete for the same trigger.
-- **Guard hook.** `plugins/pantheon/hooks/guard.sh` blocks `rm -rf /` or `~`, force-push to main/master, `mkfs`, raw disk writes and fork bombs. It is deliberately narrow.
+- **Guard hook.** `plugins/pantheon/hooks/guard.sh` blocks `rm -rf /` or `~`, force-push to main/master, `mkfs`, raw disk writes and fork bombs. It is deliberately narrow: a seatbelt, not a sandbox. `tests/guard.sh` pins what it blocks and what it lets through.
+
+## Evals
+
+`plugins/pantheon/evals/` holds [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) cases:
+
+- a review finds a planted off-by-one bug
+- a debugging answer names the root cause rather than patching the symptom
+- a planning request gets a plan, not code
+- a review flags a prompt injection hidden in the diff and doesn't approve it
+
+Each case runs with and without the plugin. The report shows the difference, plus whether the matching agent was dispatched. On these small cases plain Claude already passes, so the suite works as a regression check today, not as proof that the team helps. Harder, multi-file cases are where the team should show a difference.
+
+Evals run real Claude sessions on your own account, so the Makefile defaults are cheap and private: one run per case, a $5 ceiling, and a local report that is not published.
+
+```bash
+make eval-smoke                  # smoke cases, one run each (about $0.50 measured)
+make eval                        # every case, with and without the plugin
+make eval CASE='review-*' EVAL_RUNS=3 EVAL_BUDGET=10
+```
+
+Results land in `plugins/pantheon/evals/results/`, which is gitignored.
 
 ## Layout
 
 ```
 .claude-plugin/marketplace.json   this repo is a Claude Code plugin marketplace
-plugins/pantheon/                 the team plugin: agents/ commands/ skills/ hooks/
+plugins/pantheon/                 the team plugin: agents/ commands/ skills/ hooks/ evals/ ONBOARDING.md
 core/                             rules/, statusline.sh, settings.json fragment
 skills/manifest.tsv               profile · source · skill   (skills.sh sources or "vendor")
 skills/known-sources.tsv          upstreams for skills installed before skills.sh kept a lock
@@ -134,7 +161,7 @@ skills/vendor/                    skills with no known upstream
 plugins.tsv                       marketplaces + plugins
 bin/pantheon                      the installer (bash 3.2 compatible; Makefile wraps it)
 scripts/capture.sh                snapshot this machine into the repo
-tests/                            lint + install/uninstall round-trip
+tests/                            lint, guard-hook cases, install/uninstall round-trip
 docs/best-practices.md            the Claude Code practices this harness encodes
 ```
 
@@ -144,7 +171,7 @@ docs/best-practices.md            the Claude Code practices this harness encodes
 
 ## License
 
-Pantheon's own files are MIT. Skills in `skills/vendor/` and those installed from the manifest keep their authors' licenses.
+Pantheon's own files are MIT. Skills in `skills/vendor/` keep their authors' licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Skills installed from the manifest come straight from their authors under their own licenses.
 
 <p align="center">
   <img src="docs/assets/logo.png" alt="Pantheon emblem: the Greek letter Pi as a temple gate of two ember-veined columns inside a teal Greek-key ring" width="320">

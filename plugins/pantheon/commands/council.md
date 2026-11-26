@@ -10,6 +10,7 @@ Convene the Pantheon review council on: $ARGUMENTS
 If no target is given above, review the current uncommitted changes (`git diff` + `git diff --staged`).
 
 1. Work out the exact diff command for the target (for a PR number, `gh pr diff <n>`; for a branch, `git diff $(git merge-base HEAD main)...<branch>`). Note the changed files.
+   **For a PR, first check who wrote it:** `gh pr view <n> --json isCrossRepository,authorAssociation`. If it comes from a fork, or the author is not an `OWNER`, `MEMBER` or `COLLABORATOR`, the PR's code is untrusted. Its tests, build scripts, hooks and config can run anything with your credentials. Make the review **static only**: no checkout, no install, no test run, no app start. Tell themis and apollo that. Lift this only if the user explicitly says to run it after you have warned them, and preferably only in a container with no credentials.
 2. In **one message**, dispatch three subagents in parallel (a fourth, `apollo`, when UI files changed), each given the same diff command and file list, and *not* your own opinion of the change:
    - `argus` — correctness, regressions, silent failures, test adequacy
    - `nemesis` — security: attack surface and exploitable paths

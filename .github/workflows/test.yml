@@ -1,0 +1,40 @@
+# Offline checks only. No network installs and no evals: evals run real Claude sessions
+# and need credentials, so run them locally with `make eval`.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install jq and shellcheck
+        run: |
+          if command -v apt-get >/dev/null; then sudo apt-get update -q && sudo apt-get install -y -q jq shellcheck
+          else brew install jq shellcheck; fi
+      - name: Lint
+        run: ./tests/lint.sh
+      - name: Skill quality
+        run: ./tests/skills.sh
+      - name: Guard hook cases
+        run: ./tests/guard.sh
+      - name: Install/uninstall edge cases (macOS system bash 3.2 where available)
+        run: |
+          if [ -x /bin/bash ] && /bin/bash -c '[ "${BASH_VERSINFO[0]}" = 3 ]'; then /bin/bash tests/edges.sh
+          else ./tests/edges.sh; fi

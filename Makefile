@@ -15,7 +15,8 @@ export PROFILES SKILLS_VERSION DRY_RUN FORCE CLAUDE_DIR
 .DEFAULT_GOAL := help
 .PHONY: help install uninstall install-core install-team install-skills install-plugins \
         uninstall-core uninstall-team uninstall-skills uninstall-plugins install-all uninstall-all \
-        skill-add skill-remove search update capture list profiles status doctor validate test plan
+        skill-add skill-remove search update capture list profiles status doctor validate test plan \
+        eval eval-smoke
 
 help: ## Show this help
 	@printf '\n\033[1m$(NAME)\033[0m — the Pantheon AI team for Claude Code\n\n'
@@ -92,7 +93,29 @@ validate: ## Validate manifests, frontmatter, and skill quality (structure + tri
 	@claude plugin validate .
 	@claude plugin validate plugins/$(NAME)
 	@./tests/lint.sh
+	@./tests/guard.sh
 	@./tests/skills.sh
 
-test: validate ## Lint + full install/uninstall round-trip in a throwaway HOME
+test: validate ## Lint + install/uninstall edge cases + full round-trip in a throwaway HOME
+	@./tests/edges.sh
 	@./tests/roundtrip.sh
+
+## ---- evals (run real Claude sessions on your account; cheap, private defaults)
+#   EVAL_RUNS=1          runs per case per arm (claude's default is 3)
+#   EVAL_ABLATION=with-without   also run a no-plugin baseline; "none" halves the cost, but then
+#                                "did it dispatch agent X" graders count toward the score instead
+#                                of being reported as indicators, so cases can fail on them
+#   EVAL_BUDGET=5        hard USD ceiling for the whole run
+#   CASE=review-*        only cases matching this glob; TAG=smoke only cases with this tag
+#   EVAL_ARGS=...        anything else for `claude plugin eval` (e.g. --publish-report, -j 2)
+EVAL_RUNS     ?= 1
+EVAL_ABLATION ?= with-without
+EVAL_BUDGET   ?= 5
+
+eval: ## Run the plugin eval suite (EVAL_RUNS=1, EVAL_BUDGET=5 USD, report stays local)
+	@claude plugin eval plugins/$(NAME) --runs $(EVAL_RUNS) --ablation $(EVAL_ABLATION) \
+	  --max-cost-usd $(EVAL_BUDGET) --no-publish \
+	  $(if $(CASE),--case '$(CASE)') $(if $(TAG),--tag '$(TAG)') $(EVAL_ARGS)
+
+eval-smoke: ## Quick check: smoke-tagged cases, one run each (about $0.50)
+	@$(MAKE) --no-print-directory eval TAG=smoke

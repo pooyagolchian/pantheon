@@ -19,7 +19,7 @@ Use subagents for independent work run in parallel, for wide searches where only
 → `pantheon-orchestration` skill · `/council` · `/forge`
 
 ## 5. Least privilege
-Reviewers and planners have no Edit/Write. Builders don't commit, push or deploy unless told. Permissions use narrow allow-lists. A guard hook blocks catastrophic commands deterministically.
+Reviewers and planners have no Edit/Write. Builders don't commit, push or deploy unless told. Permissions use narrow allow-lists. A guard hook blocks the common forms of catastrophic commands. It is a seatbelt against accidents, not a boundary against a steered model; `permissions.deny` and a sandbox are.
 → agent `tools:` frontmatter · `plugins/pantheon/hooks/guard.sh` · `harness-engineering` skill
 
 ## 6. Humans decide the irreversible
